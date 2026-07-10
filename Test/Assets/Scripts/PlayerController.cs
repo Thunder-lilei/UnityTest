@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,14 +10,17 @@ public class PlayerController : MonoBehaviour
     public float speed = 20f;
     private int count;
     public TextMeshProUGUI countText;
-    public GameObject winTextObject;
+    public GameObject gameOverPanel;
+    public TextMeshProUGUI resultText;
 
     void Start()
     {
+        Time.timeScale = 1;
+        gameOverPanel.SetActive(false);
         rb = GetComponent<Rigidbody>();
         count = 0; 
         SetCountText();
-        winTextObject.SetActive(false);
+
     }
 
     void FixedUpdate()
@@ -48,8 +52,7 @@ public class PlayerController : MonoBehaviour
         if (collision.gameObject.CompareTag("Enemy"))
         {
             Destroy(gameObject); 
-            winTextObject.gameObject.SetActive(true);
-            winTextObject.GetComponent<TextMeshProUGUI>().text = "失败!";
+            ShowGameOver();
         }
     }
 
@@ -59,9 +62,25 @@ public class PlayerController : MonoBehaviour
 
        if (count >= 4)
        {
-           winTextObject.SetActive(true);
            // 移除敌人
            Destroy(GameObject.FindGameObjectWithTag("Enemy"));
+           ShowGameOver();
        }
+    }
+
+    void ShowGameOver()
+    {
+        gameOverPanel.SetActive(true);
+        Time.timeScale = 0;
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
     }
 }
