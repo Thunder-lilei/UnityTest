@@ -1,6 +1,6 @@
 # UnityTest
 
-基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了敌人追逐和游戏结束功能。
+基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、敌人追逐、脚印系统和游戏结束功能。
 
 ## 环境要求
 
@@ -13,22 +13,26 @@
 ```
 Test/
 ├── Assets/
-│   ├── Materials/          # 材质（Player/Enemy/PickUp/Wall/Background）
-│   ├── Prefabs/            # 预制体（PickUp/DynamicBox）
+│   ├── Characters/             # 角色 Prefab（AI 生成）
+│   ├── Materials/              # 材质（Player/Enemy/PickUp/Wall/Background/Footprint）
+│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad）
 │   ├── Scenes/
-│   │   └── 迷你游戏.scene   # 主关卡（含 NavMesh 烘焙数据）
-│   └── Scripts/            # C# 脚本
-│       ├── PlayerController.cs   # 玩家控制、计分、游戏结束
-│       ├── CameraController.cs   # 摄像机跟随
-│       ├── EnemyMovement.cs      # 敌人 NavMesh 追逐
-│       └── Rotator.cs            # 收集物旋转动画
+│   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
+│   ├── Scripts/                # C# 脚本
+│   │   ├── PlayerController.cs # 玩家控制、动画驱动、脚印、游戏结束
+│   │   ├── CameraController.cs # 摄像机跟随
+│   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐
+│   │   ├── Footprint.cs        # 脚印渐隐消失
+│   │   └── Rotator.cs          # 收集物旋转动画
+│   └── TJGenerators/           # AI 生成资源缓存
 ├── Packages/
 └── ProjectSettings/
 ```
 
 ## 游戏玩法
 
-- **WASD / 方向键**：控制玩家小球移动
+- **WASD / 方向键**：控制角色移动（恒定速度，非物理力驱动）
+- 角色自动朝向移动方向，行走时留下渐隐脚印
 - 收集场景中的 4 个旋转方块即可获胜
 - 躲避敌人追逐，被碰到则失败
 - 胜利或失败后弹出面板，可选择**重新开始**或**退出游戏**
@@ -37,6 +41,11 @@ Test/
 
 | 功能 | 说明 |
 |------|------|
+| AI 生成角色 | 通过 Meshy AI + TJGenerators 插件生成 Humanoid 角色（含 Idle/Walk/Run 动画） |
+| Animator 状态机 | Speed 参数驱动 Idle ↔ Walk ↔ Run 过渡，Action 触发特殊动作 |
+| 恒定速度移动 | 使用 rb.velocity 替代 AddForce，避免加速感 |
+| 朝向移动方向 | Quaternion.Slerp 平滑转向 |
+| 脚印系统 | 移动时左右交替生成脚印，3 秒渐隐消失 |
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
 | 重新开始 | 通过 SceneManager 重新加载当前场景 |

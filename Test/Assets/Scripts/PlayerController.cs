@@ -7,20 +7,28 @@ using UnityEngine.SceneManagement;
 public class PlayerController : MonoBehaviour
 {
     private Rigidbody rb;
-    public float speed = 20f;
+    private Animator animator;
+    public float speed = 10f;
     private int count;
     public TextMeshProUGUI countText;
     public GameObject gameOverPanel;
     public TextMeshProUGUI resultText;
+    public GameObject footprintPrefab;   // 脚印 Prefab
+    public float footprintSpacing = 1f;  // 每隔多远留一个脚印
+    private Vector3 lastFootprintPos;     // 上一个脚印位置
+    private bool isLeftFoot = true;
+    public GameObject foot;
 
     void Start()
     {
         Time.timeScale = 1;
         gameOverPanel.SetActive(false);
         rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
         count = 0; 
         SetCountText();
-
+        lastFootprintPos = transform.position;
+        foot = transform.Find("Foot").gameObject;
     }
 
     void FixedUpdate()
@@ -30,7 +38,34 @@ public class PlayerController : MonoBehaviour
 
         Vector3 movement = new Vector3(movementX, 0.0f, movementY);
 
-        rb.AddForce(movement * speed);
+        // 不用AddForce 恒定速度
+        rb.velocity = new Vector3(movementX * speed, rb.velocity.y, movementY * speed);
+        animator.SetFloat("Speed", rb.velocity.magnitude);
+
+        // 朝向移动方向
+        if (movement != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(movement);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 0.1f);
+        }
+
+        // 移动时留脚印
+        if (rb.velocity.magnitude > 0.1f)
+        {
+            if (Vector3.Distance(transform.position, lastFootprintPos) >= footprintSpacing)
+            {
+                Vector3 pos = transform.position;
+                pos.y = 0.01f;
+                
+                // 左右脚偏移
+                pos += transform.right * (isLeftFoot ? -0.2f : 0.2f);
+                
+                Quaternion rot = Quaternion.LookRotation(rb.velocity);
+                Instantiate(footprintPrefab, pos, rot, foot.transform);
+                lastFootprintPos = transform.position;
+                isLeftFoot = !isLeftFoot;
+            }
+        }
     }
 
     void OnTriggerEnter(Collider other) 
@@ -84,3 +119,4 @@ public class PlayerController : MonoBehaviour
         Application.Quit();
     }
 }
+
