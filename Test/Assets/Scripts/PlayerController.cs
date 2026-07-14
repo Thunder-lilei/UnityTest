@@ -18,6 +18,9 @@ public class PlayerController : MonoBehaviour
     private Vector3 lastFootprintPos;     // 上一个脚印位置
     private bool isLeftFoot = true;
     public GameObject foot;
+    public GameObject skill;
+    public GameObject fireballPrefab;
+    public Camera mainCamera;
 
     void Start()
     {
@@ -28,7 +31,17 @@ public class PlayerController : MonoBehaviour
         count = 0; 
         SetCountText();
         lastFootprintPos = transform.position;
-        foot = transform.Find("Foot").gameObject;
+        // 获取场景主相机
+        mainCamera = Camera.main;
+    }
+
+    void Update()
+    {
+        // 左键按下
+        if (Input.GetMouseButtonDown(0))
+        {
+            FireFireball();
+        }
     }
 
     void FixedUpdate()
@@ -39,11 +52,15 @@ public class PlayerController : MonoBehaviour
         Vector3 movement = new Vector3(movementX, 0.0f, movementY);
 
         // 不用AddForce 恒定速度
-        rb.velocity = new Vector3(movementX * speed, rb.velocity.y, movementY * speed);
+        // 不改变Y轴 避免穿模
+        Vector3 vel = rb.velocity;
+        vel.x = movementX * speed;
+        vel.z = movementY * speed;
+        rb.velocity = vel;
         animator.SetFloat("Speed", rb.velocity.magnitude);
 
         // 朝向移动方向
-        if (movement != Vector3.zero)
+        if (movement.magnitude > 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(movement);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 0.1f);
@@ -60,7 +77,7 @@ public class PlayerController : MonoBehaviour
                 // 左右脚偏移
                 pos += transform.right * (isLeftFoot ? -0.2f : 0.2f);
                 
-                Quaternion rot = Quaternion.LookRotation(rb.velocity);
+                Quaternion rot = Quaternion.LookRotation(rb.velocity) * Quaternion.Euler(90, 0, 0);
                 Instantiate(footprintPrefab, pos, rot, foot.transform);
                 lastFootprintPos = transform.position;
                 isLeftFoot = !isLeftFoot;
@@ -117,6 +134,21 @@ public class PlayerController : MonoBehaviour
     public void QuitGame()
     {
         Application.Quit();
+    }
+
+    void FireFireball()
+    {
+        if (fireballPrefab == null || skill == null)
+            return;
+
+        // 朝角色面朝方向发射
+        Vector3 direction = transform.forward;
+        direction.y = 0;
+        direction.Normalize();
+
+        // 在角色前方生成火弹
+        Vector3 spawnPos = transform.position + Vector3.up + transform.forward;
+        Instantiate(fireballPrefab, spawnPos, Quaternion.LookRotation(direction), skill.transform);
     }
 }
 

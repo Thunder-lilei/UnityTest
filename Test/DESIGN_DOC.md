@@ -1,10 +1,10 @@
 # 设计文档 — 迷你游戏 (Roll-a-Ball)
 
 > **项目名称**: 迷你游戏
-> **游戏类型**: 3D 收集 / 逃避追击
+> **游戏类型**: 3D 收集 / 战斗 / 逃避追击
 > **目标平台**: Windows PC
-> **操作方式**: 键盘 (WASD / 方向键)
-> **文档日期**: 2026-07-10 (更新: 2026-07-13)
+> **操作方式**: 键盘 (WASD / 方向键) + 鼠标 (左键攻击)
+> **文档日期**: 2026-07-10 (更新: 2026-07-14)
 
 ---
 
@@ -12,12 +12,12 @@
 
 ### 1.1 一句话描述
 
-控制一个 AI 生成的冒险者角色在有限场地中收集所有金色方块，同时躲避红色敌人 AI 的追击。
+控制一个 AI 生成的冒险者角色在有限场地中收集所有金色方块，同时用火球攻击敌人或躲避追击。
 
 ### 1.2 核心循环
 
 ```
-开始 → 移动角色 → 收集金色方块 → (躲避/利用障碍物阻挡敌人)
+开始 → 移动角色 → 收集金色方块 → (火球消灭/躲避/利用障碍物阻挡敌人)
                                         ↓
                               收集满 4 个 → 胜利面板
                               被敌人追上 → 失败面板
@@ -28,7 +28,7 @@
 ### 1.3 目标受众
 
 - Unity 学习者 / 入门开发者
-- 适合作为物理 + NavMesh AI 的教学示例项目
+- 适合作为 URP + NavMesh AI + VFX Graph 的教学示例项目
 
 ---
 
@@ -42,11 +42,12 @@
 | 移动方式 | 恒定速度 (rb.velocity) |
 | 移动速度 | 10 单位/秒 |
 | 碰撞体 | CapsuleCollider (Radius=0.5, Height=2) |
-| 物理 | Rigidbody (受重力影响，冻结 X/Z 旋转防翻倒) |
+| 物理 | Rigidbody (受重力影响，freezeRotation=true 防翻倒和转圈) |
 | 动画 | Animator (Idle/Walk/Run 由 Speed 参数驱动) |
-| 脚印 | 移动时左右交替生成，3 秒渐隐消失 |
+| 攻击 | 鼠标左键发射火球 (VFX Graph 特效) |
+| 脚印 | 移动时左右交替生成，2 秒渐隐消失 |
 
-**操作感设计**: 使用 velocity 直接设定速度而非 AddForce，松手即停，操控直接可控。角色自动朝向移动方向（Quaternion.Slerp 平滑转向），行走时留下脚印增强临场感。
+**操作感设计**: 使用 velocity 直接设定速度而非 AddForce，松手即停，操控直接可控。角色自动朝向移动方向（Quaternion.Slerp 平滑转向），行走时留下脚印增强临场感。鼠标左键发射火球消灭敌人，增加攻防策略。
 
 ### 2.2 收集机制
 
@@ -70,7 +71,20 @@
 
 **速度平衡**: 敌人速度 (2.5) 低于玩家力度 (10)，确保玩家有逃跑空间，但障碍物和场地限制使得逃避并非毫无策略。
 
-### 2.4 动态障碍物系统
+### 2.4 火球攻击系统
+
+| 属性 | 值 |
+|---|---|
+| 外观 | VFX Graph 火焰粒子特效 |
+| 发射方式 | 鼠标左键，朝角色朝向发射 |
+| 飞行速度 | 20 单位/秒 |
+| 碰撞体 | SphereCollider (Trigger) |
+| 存活时间 | 3 秒 |
+| 效果 | 命中 Enemy → 消灭敌人 + 火球自毁 |
+
+**设计意图**: 火球赋予玩家主动攻击能力，增加游戏策略维度。玩家可以选择逃跑或反击，降低纯被动逃避的挫败感。
+
+### 2.5 动态障碍物系统
 
 | 属性 | 值 |
 |---|---|
@@ -81,7 +95,7 @@
 
 **策略深度**: 玩家可以推动黑色方块构建临时屏障，阻挡敌人前进路径。方块静止后会在 NavMesh 上挖洞，迫使敌人重新规划路线。这是核心的策略玩法层。
 
-### 2.5 静态障碍物
+### 2.6 静态障碍物
 
 | 类型 | 描述 |
 |---|---|
@@ -222,9 +236,9 @@ N = 4 → GameOverPanel: "胜利!" (显示), Enemy 销毁, Time.timeScale = 0
 ### 6.2 材质风格
 
 - AI 生成角色使用贴图材质 (2048×2048 纹理)
-- 脚印使用半透明材质，3 秒渐隐消失
-- 其余使用 Standard Shader，无贴图，纯色材质
-- Metallic = 0（非金属质感）
+- 脚印使用半透明材质，2 秒渐隐消失 (URP _BaseColor)
+- 火球使用 VFX Graph 粒子特效
+- 其余使用 URP Lit/Unlit Shader，无贴图，纯色材质
 - 光照：单方向光，50° 仰角，硬阴影
 
 ### 6.3 动画
@@ -232,9 +246,10 @@ N = 4 → GameOverPanel: "胜利!" (显示), Enemy 销毁, Time.timeScale = 0
 | 对象 | 动画类型 | 参数 |
 |---|---|---|
 | 玩家角色 | Animator 状态机 | Idle/Walk/Run 由 Speed (Float) 驱动，Action (Trigger) 触发特殊动作 |
+| 火球 | VFX Graph | 火焰粒子特效，3 秒后消失 |
 | 收集品 | 脚本旋转 | (15, 30, 45)°/s |
 | 敌人 | NavMesh 移动 | 平滑追踪 |
-| 脚印 | 脚本渐隐 | 3 秒 alpha 递减至消失 |
+| 脚印 | 脚本渐隐 | 2 秒 alpha 递减至消失 (URP _BaseColor) |
 
 玩家角色动画由 Meshy AI 生成 (Idle/Walk/Run)，Animator Controller 自动创建。
 
@@ -270,6 +285,7 @@ N = 4 → GameOverPanel: "胜利!" (显示), Enemy 销毁, Time.timeScale = 0
 | 因素 | 影响 |
 |---|---|
 | 玩家恒定速度 10 > 敌人速度 2.5 | 玩家可逃脱追击 |
+| 火球攻击 (20 speed) | 玩家可主动消灭敌人，增加策略维度 |
 | 4 个收集品需全部收集 | 玩家不能一直逃跑，必须接近危险区域 |
 | 动态障碍物 | 玩家可主动改变地形，增加策略 |
 | 静态障碍物 | 限制逃跑路线，增加紧张感 |
@@ -294,8 +310,9 @@ N = 4 → GameOverPanel: "胜利!" (显示), Enemy 销毁, Time.timeScale = 0
 | S / ↓ | 向后 (Z-) |
 | A / ← | 向左 (X-) |
 | D / → | 向右 (X+) |
+| 鼠标左键 | 发射火球 |
 
-使用 Unity 旧版 Input Manager 的 `Input.GetAxis("Horizontal")` 和 `Input.GetAxis("Vertical")`，支持键盘和手柄模拟摇杆。
+使用 Unity 旧版 Input Manager 的 `Input.GetAxis("Horizontal/Vertical")` 控制移动，`Input.GetMouseButtonDown(0)` 控制攻击。
 
 ---
 
@@ -318,14 +335,15 @@ N = 4 → GameOverPanel: "胜利!" (显示), Enemy 销毁, Time.timeScale = 0
 Test/
 ├── Assets/
 │   ├── Characters/          (1 个 .prefab: Player AI 生成角色)
-│   ├── Materials/          (7 个 .mat 材质，含 FootprintMat)
-│   ├── Prefabs/            (3 个 .prefab: DynamicBox, PickUp, Quad)
+│   ├── Effects/             (1 个 .vfx: FireBall VFX Graph 特效)
+│   ├── Materials/          (7 个 .mat 材质，含 FootprintMat，已适配 URP)
+│   ├── Prefabs/            (4 个 .prefab: DynamicBox, PickUp, Quad, FireBall)
 │   ├── Scenes/             (2 个 .scene: 迷你游戏, SampleScene)
-│   ├── Scripts/            (5 个 .cs 脚本)
+│   ├── Scripts/            (6 个 .cs 脚本)
 │   ├── TJGenerators/       (AI 生成资源缓存)
 │   └── TextMesh Pro/       (TMP 资源，含微软雅黑中文字体)
 ├── Builds/                 (Windows 构建产物)
-├── Packages/               (manifest.json 依赖管理)
+├── Packages/               (manifest.json 依赖管理，含 URP + VFX Graph)
 ├── ProjectSettings/        (项目配置)
 ├── screenshots/            (游戏截图)
 ├── TECHNICAL_DOC.md        (技术文档)

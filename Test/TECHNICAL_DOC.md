@@ -1,11 +1,11 @@
 # 技术文档 — 迷你游戏 (Roll-a-Ball)
 
-> **项目名称**: Test  
-> **产品名称**: 迷你游戏  
-> **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)  
-> **渲染管线**: Built-in Render Pipeline  
-> **目标平台**: Windows Standalone (x86_64)  
-> **文档日期**: 2026-07-10
+> **项目名称**: Test
+> **产品名称**: 迷你游戏
+> **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
+> **渲染管线**: Universal Render Pipeline (URP)
+> **目标平台**: Windows Standalone (x86_64)
+> **文档日期**: 2026-07-10 (更新: 2026-07-14)
 
 ---
 
@@ -21,7 +21,7 @@
 | 分辨率 | 1920 × 1080 |
 | 全屏模式 | 全屏 |
 | 色彩空间 | Linear |
-| 渲染路径 | Forward |
+| 渲染路径 | URP Forward |
 | 后台运行 | 开启 |
 | Graphics Jobs | 开启 |
 
@@ -51,7 +51,9 @@
 | `com.unity.ai.navigation` | 1.1.5 | NavMesh AI 寻路 |
 | `com.unity.collab-proxy` | 2.12.4 | 版本控制 |
 | `com.unity.feature.development` | 1.0.1 | 开发工具集 |
+| `com.unity.render-pipelines.universal` | 14.2.0-t1 | URP 渲染管线 |
 | `com.unity.textmeshpro` | 3.0.9 | UI 文本渲染 |
+| `com.unity.visualeffectgraph` | 14.2.0-t1 | VFX Graph 粒子特效 |
 | `com.unity.timeline` | 1.7.7 | 时间线 |
 | `com.unity.ugui` | 1.0.0 | uGUI 框架 |
 | `com.unity.visualscripting` | 1.9.4 | 可视化脚本 |
@@ -60,13 +62,14 @@
 
 ## 2. 脚本架构
 
-项目共包含 **5 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
+项目共包含 **6 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
 
 ```
 Assets/Scripts/
 ├── CameraController.cs    — 摄像机跟随
-├── PlayerController.cs    — 玩家控制、动画驱动、脚印、游戏状态
+├── PlayerController.cs    — 玩家控制、动画驱动、脚印、火球攻击、游戏状态
 ├── EnemyMovement.cs       — 敌人 AI 寻路
+├── FireBall.cs            — 火球飞行与碰撞
 ├── Footprint.cs           — 脚印渐隐消失
 └── Rotator.cs             — 收集品旋转动画
 ```
@@ -89,7 +92,7 @@ Assets/Scripts/
 
 ### 2.2 PlayerController.cs
 
-**职责**: 玩家输入、恒定速度移动、动画驱动、脚印生成、碰撞检测、得分管理、胜负判定。
+**职责**: 玩家输入、恒定速度移动、动画驱动、脚印生成、火球攻击、碰撞检测、得分管理、胜负判定。
 
 **依赖**: `UnityEngine`, `TMPro` (TextMeshPro), `UnityEngine.SceneManagement`
 
@@ -101,7 +104,10 @@ Assets/Scripts/
 | `resultText` | `TextMeshProUGUI` | public | 胜负结果文本 |
 | `footprintPrefab` | `GameObject` | public | 脚印 Prefab 引用 |
 | `footprintSpacing` | `float` | public | 脚印间距，默认 `1` |
-| `foot` | `GameObject` | private | 脚印父物体（Foot 子对象） |
+| `foot` | `GameObject` | public | 脚印父物体（Skill 子对象） |
+| `skill` | `GameObject` | public | 技能特效父物体 |
+| `fireballPrefab` | `GameObject` | public | 火球 Prefab 引用 |
+| `mainCamera` | `Camera` | public | 主摄像机引用 |
 | `rb` | `Rigidbody` | private | 物理刚体引用 |
 | `animator` | `Animator` | private | 动画控制器引用 |
 | `count` | `int` | private | 当前收集数量 |
@@ -110,22 +116,25 @@ Assets/Scripts/
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Start()` | 初始化 | 获取 `Rigidbody` 和 `Animator`，初始化计数，隐藏面板，记录初始位置 |
-| `FixedUpdate()` | 物理帧 | 读取输入 → `rb.velocity` 恒定速度移动 → `animator.SetFloat("Speed")` → 朝向移动方向 → 生成脚印 |
+| `Start()` | 初始化 | 获取 `Rigidbody` 和 `Animator`，初始化计数，隐藏面板，记录初始位置，获取主摄像机 |
+| `Update()` | 每帧 | 检测鼠标左键 → `FireFireball()` |
+| `FixedUpdate()` | 物理帧 | 读取输入 → `rb.velocity` 恒定速度移动（保留 Y 轴） → `animator.SetFloat("Speed")` → 朝向移动方向 → 生成脚印 |
 | `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `PickUp` 标签对象 → 禁用该对象，`count++`，更新 UI |
 | `OnCollisionEnter(Collision)` | 碰撞回调 | 碰到 `Enemy` 标签对象 → 销毁玩家 → `ShowGameOver()` |
 | `SetCountText()` | 自定义 | 更新得分为"得分: N"；当 `count >= 4` → `ShowGameOver()`，销毁所有 Enemy |
 | `ShowGameOver()` | 自定义 | 显示游戏结束面板，`Time.timeScale = 0` 暂停 |
 | `RestartGame()` | public | `SceneManager.LoadScene()` 重新开始 |
 | `QuitGame()` | public | `Application.Quit()` 退出游戏 |
+| `FireFireball()` | 自定义 | 在角色前方生成火球实例，朝角色朝向发射 |
 
 **核心逻辑流**:
 
 ```
-Input → FixedUpdate → rb.velocity (恒定速度)
+Input → FixedUpdate → rb.velocity (恒定速度，保留Y轴)
                        ├── animator.SetFloat("Speed") → 动画状态机驱动
-                       ├── Quaternion.Slerp → 朝向移动方向
-                       └── 脚印生成 (距离间隔 + 左右交替)
+                       ├── Quaternion.Slerp → 朝向移动方向 (magnitude > 0.1f)
+                       └── 脚印生成 (距离间隔 + 左右交替 + 旋转修正)
+Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
                                         ↓
                               OnCollisionEnter(Enemy) → ShowGameOver (失败)
                               OnTriggerEnter(PickUp)  → count++
@@ -160,22 +169,43 @@ Input → FixedUpdate → rb.velocity (恒定速度)
 | Base Offset | 0.5 |
 | 避障质量 | High Quality (4) |
 
-### 2.4 Footprint.cs
+### 2.4 FireBall.cs
 
-**职责**: 脚印渐隐消失效果。
+**职责**: 火球飞行、碰撞检测与敌人消灭。
+
+**依赖**: `UnityEngine`
 
 | 字段 | 类型 | 可见性 | 说明 |
 |---|---|---|---|
-| `lifetime` | `float` | public | 脚印存活时间，默认 `3` 秒 |
+| `speed` | `float` | public | 飞行速度，默认 `20` |
+| `lifetime` | `float` | public | 存活时间，默认 `3` 秒 |
+
+| 方法 | 生命周期 | 逻辑 |
+|---|---|---|
+| `Start()` | 初始化 | `Destroy(gameObject, lifetime)`；忽略与 Player 的碰撞（`Physics.IgnoreCollision`） |
+| `Update()` | 每帧 | `transform.position += transform.forward * speed * Time.deltaTime` |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `Enemy` 标签 → `Destroy(other.gameObject)` 消灭敌人；然后 `Destroy(gameObject)` 自毁 |
+
+**设计要点**: 火球使用 `transform.forward` 直线飞行，不依赖 Rigidbody。通过 `Physics.IgnoreCollision` 避免与发射者碰撞。命中任何物体后自毁。
+
+### 2.5 Footprint.cs
+
+**职责**: 脚印渐隐消失效果（URP 适配版）。
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `lifetime` | `float` | public | 脚印存活时间，默认 `2` 秒 |
 | `mat` | `Material` | private | 材质引用 |
 | `timer` | `float` | private | 计时器 |
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Start()` | 初始化 | 获取 Renderer 材质，设置初始 alpha = 1 |
-| `Update()` | 每帧 | 累加计时器，按比例递减材质 alpha；超时后 `Destroy(gameObject)` |
+| `Start()` | 初始化 | 获取 Renderer 材质，设置 `_BaseColor` alpha = 1 |
+| `Update()` | 每帧 | 累加计时器，按比例递减材质 `_BaseColor` alpha；超时后 `Destroy(gameObject)` |
 
-### 2.5 Rotator.cs
+**URP 适配**: 材质属性从 Built-in 的 `_Color` 改为 URP 的 `_BaseColor`。
+
+### 2.6 Rotator.cs
 
 **职责**: 装饰性旋转动画，应用于收集品。
 
@@ -193,10 +223,11 @@ Input → FixedUpdate → rb.velocity (恒定速度)
 ┌─────────────────────────────────────────────────────┐
 │                   PlayerController                   │
 │  ┌─────────────────────────────────────────────┐    │
-│  │  FixedUpdate: Input → rb.velocity (恒定速度) │    │
+│  │  FixedUpdate: Input → rb.velocity (恒定速度，保留Y轴) │    │
 │  │  Animator.SetFloat("Speed") → 状态机驱动     │    │
 │  │  Quaternion.Slerp → 朝向移动方向             │    │
-│  │  Footprint 生成 (间距 + 左右交替)            │    │
+│  │  Footprint 生成 (间距 + 左右交替 + 旋转修正)  │    │
+│  │  Update: 鼠标左键 → FireFireball()          │    │
 │  │  OnTriggerEnter(PickUp) → count++ → UI       │    │
 │  │  OnCollisionEnter(Enemy) → ShowGameOver      │    │
 │  │  count >= 4 → Victory, Destroy Enemy         │    │
@@ -210,8 +241,10 @@ Input → FixedUpdate → rb.velocity (恒定速度)
 │  │ GamePanel│ │          │ │    → SetDestination│   │
 │  └──────────┘ └──────────┘ └──────────────────┘    │
 │                                                     │
+│  FireBall.cs ← fireballPrefab (FireBall + VFX)      │
+│    → 飞行 (20 speed) → OnTriggerEnter(Enemy) → 消灭  │
 │  Footprint.cs ← footprintPrefab (Quad)              │
-│    → 渐隐消失 (3s)                                   │
+│    → 渐隐消失 (2s, URP _BaseColor)                   │
 │  CameraController                                   │
 │    → 引用 Player (跟随偏移)                          │
 │  Rotator                                            │
@@ -238,9 +271,10 @@ Input → FixedUpdate → rb.velocity (恒定速度)
 │   ├── DynamicBox       [4 个 DynamicBox Prefab 堆叠]
 │   ├── DynamicBox (1)   [4 个 DynamicBox Prefab 堆叠]
 │   └── DynamicBox (2)   [4 个 DynamicBox Prefab 堆叠]
-├── Player                [CapsuleCollider, Rigidbody(FreezeRotation XZ), Animator, PlayerController]
-│   └── Foot              [脚印父物体]
-│       └── GeneratedModel [MeshFilter, MeshRenderer, CapsuleCollider]
+├── Player                [CapsuleCollider, Rigidbody(freezeRotation=true), Animator, PlayerController]
+│   ├── Foot              [脚印父物体]
+│   ├── Skill             [技能特效父物体]
+│   └── GeneratedModel    [MeshFilter, MeshRenderer, CapsuleCollider]
 ├── wall                  [父对象]
 │   ├── West Wall        [BoxCollider, Cube Mesh]
 │   ├── East Wall        [BoxCollider, Cube Mesh]
@@ -303,8 +337,8 @@ wall│     [DynamicBox堆]        │  wall
 | Transform | 根物体 |
 | Animator | Avatar: ae749bf5fe5aaf00, Controller: ae749bf5fe5aaf00_Controller, Apply Root Motion: False |
 | CapsuleCollider | Radius=0.5, Height=2 |
-| Rigidbody | useGravity=true, Freeze Rotation X/Z |
-| PlayerController (脚本) | speed=10, footprintPrefab, footprintSpacing=1 |
+| Rigidbody | useGravity=true, freezeRotation=true |
+| PlayerController (脚本) | speed=10, footprintPrefab, footprintSpacing=1, fireballPrefab |
 
 **子物体 GeneratedModel**:
 - MeshFilter (角色网格)
@@ -315,16 +349,27 @@ wall│     [DynamicBox堆]        │  wall
 - 状态: Idle / Walk / Run / Action
 - 过渡: Idle↔Walk (Speed > 0.1), Walk↔Run (Speed > 0.5), Action→Walk (无条件)
 
-### 5.2 Quad.prefab (脚印)
+### 5.2 FireBall.prefab (火球)
+
+| 组件 | 配置 |
+|---|---|
+| Transform | 生成位置：角色前方 + Vector3.up |
+| VFX Component | FireBall.vfx (VFX Graph 粒子特效) |
+| SphereCollider | isTrigger = true |
+| FireBall (脚本) | speed=20, lifetime=3s |
+
+**设计要点**: 火球使用 VFX Graph 实现视觉效果，SphereCollider (Trigger) 检测碰撞。通过 `Physics.IgnoreCollision` 忽略发射者。
+
+### 5.3 Quad.prefab (脚印)
 
 | 组件 | 配置 |
 |---|---|
 | Transform | Scale (0.3, 0.3, 0.3) |
 | MeshFilter | Quad (内置四边形) |
 | MeshRenderer | FootprintMat (半透明, RenderQueue=3000) |
-| Footprint (脚本) | lifetime=3s, 渐隐消失 |
+| Footprint (脚本) | lifetime=2s, URP _BaseColor 渐隐消失 |
 
-### 5.3 PickUp.prefab
+### 5.4 PickUp.prefab
 
 | 组件 | 配置 |
 |---|---|
@@ -336,7 +381,7 @@ wall│     [DynamicBox堆]        │  wall
 | Rigidbody | isKinematic = true, useGravity = false |
 | Tag | `PickUp` |
 
-### 5.4 DynamicBox.prefab
+### 5.5 DynamicBox.prefab
 
 | 组件 | 配置 |
 |---|---|
@@ -364,7 +409,7 @@ wall│     [DynamicBox堆]        │  wall
 | Dynamic Obstacle | 黑色 (0, 0, 0) | 0.50 | 动态方块 |
 | Background | 灰色 (0.51, 0.51, 0.51) | 0.25 | (备用) |
 
-AI 生成角色使用贴图材质，其余材质使用内置 Standard Shader，Metallic = 0，不透明渲染模式。
+AI 生成角色使用贴图材质，其余材质已迁移至 URP Lit/Unlit Shader。
 
 ---
 
@@ -407,13 +452,15 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 5 个脚本，约 200 行代码，结构简洁清晰 |
+| 代码规模 | 6 个脚本，约 250 行代码，结构简洁清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式，脚本间通过 Inspector 引用耦合 |
-| 物理系统 | Rigidbody + velocity 恒定速度移动；CapsuleCollider 玩家；BoxCollider 碰撞 |
+| 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
+| 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
+| 战斗系统 | 鼠标左键发射火球，VFX Graph 视觉 + SphereCollider 碰撞检测 |
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
 | UI 系统 | uGUI Canvas + TextMeshPro + 游戏结束面板（重新开始/退出） |
-| 输入系统 | 旧版 Input Manager (GetAxis) |
+| 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
 | 音频系统 | 无 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
-| 资源管理 | AI 生成模型/贴图/动画 (Meshy AI)；其余为内置图元 |
+| 资源管理 | AI 生成模型/贴图/动画 (Meshy AI)；VFX Graph 特效；其余为内置图元 |
 | 持久化 | 无 (无存档系统) |
