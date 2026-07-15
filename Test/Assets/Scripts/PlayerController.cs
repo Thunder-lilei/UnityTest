@@ -9,8 +9,6 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private Animator animator;
     public float speed = 10f;
-    private int count;
-    public TextMeshProUGUI countText;
     public GameObject gameOverPanel;
     public TextMeshProUGUI resultText;
     public GameObject footprintPrefab;   // 脚印 Prefab
@@ -28,8 +26,6 @@ public class PlayerController : MonoBehaviour
         gameOverPanel.SetActive(false);
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
-        count = 0; 
-        SetCountText();
         lastFootprintPos = transform.position;
         // 获取场景主相机
         mainCamera = Camera.main;
@@ -87,42 +83,41 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerEnter(Collider other) 
     {
-        // 标签匹配 这个标签被设置给预制体
+        // 捡经验
         if (other.gameObject.CompareTag("PickUp")) 
         {
-            // 将另一个对象设置为非活动
-            other.gameObject.SetActive(false);
-            count++;
-            SetCountText();
+            Destroy(other.gameObject);
+            ExpBar expBar = GetComponent<ExpBar>();
+            if (expBar != null)
+                expBar.AddExp(10f);
+            AudioManager.Instance?.PlayPickupExp();
         }
         
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnCollisionStay(Collision collision)
     {
-        // 被抓到就失败
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            Destroy(gameObject); 
-            ShowGameOver();
+            HealthBar healthBar = GetComponent<HealthBar>();
+            if (healthBar != null)
+            {
+                healthBar.TakeDamage(20f * Time.deltaTime);
+                AudioManager.Instance?.PlayPlayerHurt();
+                if (healthBar.IsDead())
+                {
+                    AudioManager.Instance?.PlayPlayerDeath();
+                    Destroy(gameObject);
+                    ShowGameOver();
+                }
+            }
         }
-    }
-
-    void SetCountText() 
-    {
-       countText.text =  "得分: " + count.ToString();
-
-       if (count >= 4)
-       {
-           // 移除敌人
-           Destroy(GameObject.FindGameObjectWithTag("Enemy"));
-           ShowGameOver();
-       }
     }
 
     void ShowGameOver()
     {
         gameOverPanel.SetActive(true);
+        AudioManager.Instance?.PlayGameOver();
         Time.timeScale = 0;
     }
 
@@ -149,6 +144,7 @@ public class PlayerController : MonoBehaviour
         // 在角色前方生成火弹
         Vector3 spawnPos = transform.position + Vector3.up + transform.forward;
         Instantiate(fireballPrefab, spawnPos, Quaternion.LookRotation(direction), skill.transform);
+        AudioManager.Instance?.PlayFireballLaunch();
     }
 }
 

@@ -1,6 +1,6 @@
 # UnityTest
 
-基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、敌人追逐、脚印系统和游戏结束功能。
+基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、血量/经验系统、敌人持续生成、音效系统和脚印系统。
 
 ## 环境要求
 
@@ -15,18 +15,23 @@ Test/
 ├── Assets/
 │   ├── Characters/             # 角色 Prefab（AI 生成）
 │   ├── Materials/              # 材质（Player/Enemy/PickUp/Wall/Background/Footprint）
-│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad）
+│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall）
+│   ├── Quaternius/             # Quaternius 3D 模型资源（敌人模型）
 │   ├── Scenes/
 │   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
 │   ├── Scripts/                # C# 脚本
-│   │   ├── PlayerController.cs # 玩家控制、动画驱动、脚印、火球攻击、游戏结束
+│   │   ├── PlayerController.cs # 玩家控制、动画、脚印、火球、经验/血量
 │   │   ├── CameraController.cs # 摄像机跟随
-│   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐
+│   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐 + 死亡掉落
+│   │   ├── EnemySpawner.cs     # 敌人持续生成（屏幕外刷新）
 │   │   ├── FireBall.cs         # 火球飞行与碰撞
 │   │   ├── Footprint.cs        # 脚印渐隐消失
+│   │   ├── AudioManager.cs     # 音效管理器（单例）
+│   │   ├── HealthBar.cs        # 血量条 UI
+│   │   ├── ExpBar.cs           # 经验条 UI + 升级系统
 │   │   └── Rotator.cs          # 收集物旋转动画
 │   ├── Effects/                # VFX 特效（FireBall.vfx）
-│   └── TJGenerators/           # AI 生成资源缓存
+│   └── TJGenerators/           # AI 生成资源缓存（含 SFX 音效）
 ├── Packages/
 └── ProjectSettings/
 ```
@@ -36,8 +41,8 @@ Test/
 - **WASD / 方向键**：控制角色移动（恒定速度，非物理力驱动）
 - **鼠标左键**：发射火球攻击敌人
 - 角色自动朝向移动方向，行走时留下渐隐脚印
-- 收集场景中的 4 个旋转方块即可获胜
-- 躲避敌人追逐，被碰到则失败；也可用火球消灭敌人
+- 收集经验方块升级，火球消灭敌人也会掉落经验
+- 敌人持续从屏幕外刷新，碰到玩家扣血，血量归零则失败
 - 胜利或失败后弹出面板，可选择**重新开始**或**退出游戏**
 
 ## 扩展功能（相对原版教程）
@@ -49,6 +54,11 @@ Test/
 | 恒定速度移动 | 使用 rb.velocity 替代 AddForce，避免加速感；保留 Y 轴速度避免穿模 |
 | 朝向移动方向 | Quaternion.Slerp 平滑转向 |
 | 火球攻击 | 鼠标左键发射火球，VFX Graph 粒子特效，命中敌人即消灭 |
+| 血量系统 | HealthBar：100 HP，敌人接触持续扣血，归零则失败 |
+| 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
+| 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
+| 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
+| 音效系统 | AudioManager 单例：8 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取/升级/游戏结束） |
 | 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失 |
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
@@ -70,6 +80,17 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ## 更新日志
+
+### v0.4 (2026-07-15)
+
+- 新增血量系统（HealthBar）：100 HP，敌人接触持续扣血，归零则失败
+- 新增经验/升级系统（ExpBar）：收集经验 +10 EXP，满 100 升级，每级 maxExp +20
+- 新增敌人持续生成（EnemySpawner）：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样
+- 新增音效系统（AudioManager 单例）：8 种 AI 生成 SFX（火球/受伤/升级/游戏结束等）
+- 新增敌人死亡掉落经验方块（EnemyMovement.OnDestroy）
+- 导入 Quaternius 3D 敌人模型资源
+- PlayerController：OnCollisionEnter → OnCollisionStay 持续扣血，PickUp 改为 Destroy + AddExp
+- FireBall：新增敌人死亡和火球命中音效
 
 ### v0.3 (2026-07-14)
 

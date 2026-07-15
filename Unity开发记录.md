@@ -208,6 +208,28 @@ Rigidbody.freezeRotation = true
 
 > 注意：`constraints = 80`（即 `FreezeRotationX | FreezeRotationZ`）只冻结了 X 和 Z 轴，Y 轴未冻结。`freezeRotation = true` 补充冻结了 Y 轴，彻底解决问题。
 
+### 问题8：Prefab 无法引用场景对象
+
+**现象**：在 `EnemyMovement.cs` 中添加了 `public GameObject pickup;`，想在 Inspector 中把场景中的 `PickUp Parent` 对象拖入该字段，但无法操作。
+
+**原因**：`EnemyMovement` 脚本挂载在 **Prefab 资产**（`Assets/Quaternius/.../zombie_basic.prefab`）上。
+
+**Prefab 是磁盘上的资产，只能引用其他项目资产**（如 `.prefab`、`.mat`、`.png` 等）。而场景中的对象（如 `PickUp Parent`）只在运行时存在，不在磁盘上，因此 Prefab 无法引用它。
+
+**解决方案**：不在 Inspector 中手动指定场景对象，改为运行时用 `GameObject.Find()` 查找：
+
+```csharp
+// ❌ 不可行：Prefab 无法引用场景对象
+public GameObject pickup;
+Instantiate(pickUpPrefab, transform.position, Quaternion.identity, pickup.transform);
+
+// ✅ 正确：运行时查找场景对象
+Transform parent = GameObject.Find("PickUp Parent")?.transform;
+Instantiate(pickUpPrefab, transform.position, Quaternion.identity, parent);
+```
+
+> **关键原则**：**Prefab 资产只能引用项目资产，不能引用场景对象。** 如果需要引用场景中的对象，应在运行时通过 `GameObject.Find()` 或 `FindWithTag()` 等方式查找。
+
 ---
 
 ## 知识点积累

@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-14)
+> **文档日期**: 2026-07-10 (更新: 2026-07-15)
 
 ---
 
@@ -62,15 +62,19 @@
 
 ## 2. 脚本架构
 
-项目共包含 **6 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
+项目共包含 **10 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
 
 ```
 Assets/Scripts/
 ├── CameraController.cs    — 摄像机跟随
-├── PlayerController.cs    — 玩家控制、动画驱动、脚印、火球攻击、游戏状态
-├── EnemyMovement.cs       — 敌人 AI 寻路
+├── PlayerController.cs    — 玩家控制、动画驱动、脚印、火球攻击、经验/血量、游戏状态
+├── EnemyMovement.cs       — 敌人 AI 寻路 + 死亡掉落经验方块
+├── EnemySpawner.cs        — 敌人持续生成（屏幕外刷新，NavMesh 采样）
 ├── FireBall.cs            — 火球飞行与碰撞
 ├── Footprint.cs           — 脚印渐隐消失
+├── AudioManager.cs        — 音效管理器（单例，8 种音效）
+├── HealthBar.cs           — 血量条 UI（100 HP，扣血，死亡判定）
+├── ExpBar.cs              — 经验条 UI + 升级系统（100 EXP 升级，每级 +20）
 └── Rotator.cs             — 收集品旋转动画
 ```
 
@@ -92,40 +96,37 @@ Assets/Scripts/
 
 ### 2.2 PlayerController.cs
 
-**职责**: 玩家输入、恒定速度移动、动画驱动、脚印生成、火球攻击、碰撞检测、得分管理、胜负判定。
+**职责**: 玩家输入、恒定速度移动、动画驱动、脚印生成、火球攻击、经验收集、血量管理、胜负判定。
 
 **依赖**: `UnityEngine`, `TMPro` (TextMeshPro), `UnityEngine.SceneManagement`
 
 | 字段 | 类型 | 可见性 | 说明 |
 |---|---|---|---|
 | `speed` | `float` | public | 移动速度，场景中设为 `10` |
-| `countText` | `TextMeshProUGUI` | public | 得分 UI |
 | `gameOverPanel` | `GameObject` | public | 游戏结束面板 |
 | `resultText` | `TextMeshProUGUI` | public | 胜负结果文本 |
 | `footprintPrefab` | `GameObject` | public | 脚印 Prefab 引用 |
 | `footprintSpacing` | `float` | public | 脚印间距，默认 `1` |
-| `foot` | `GameObject` | public | 脚印父物体（Skill 子对象） |
+| `foot` | `GameObject` | public | 脚印父物体（Foot 子对象） |
 | `skill` | `GameObject` | public | 技能特效父物体 |
 | `fireballPrefab` | `GameObject` | public | 火球 Prefab 引用 |
 | `mainCamera` | `Camera` | public | 主摄像机引用 |
 | `rb` | `Rigidbody` | private | 物理刚体引用 |
 | `animator` | `Animator` | private | 动画控制器引用 |
-| `count` | `int` | private | 当前收集数量 |
 | `lastFootprintPos` | `Vector3` | private | 上一个脚印位置 |
 | `isLeftFoot` | `bool` | private | 左右脚交替标记 |
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Start()` | 初始化 | 获取 `Rigidbody` 和 `Animator`，初始化计数，隐藏面板，记录初始位置，获取主摄像机 |
+| `Start()` | 初始化 | 获取 `Rigidbody` 和 `Animator`，隐藏面板，记录初始位置，获取主摄像机 |
 | `Update()` | 每帧 | 检测鼠标左键 → `FireFireball()` |
 | `FixedUpdate()` | 物理帧 | 读取输入 → `rb.velocity` 恒定速度移动（保留 Y 轴） → `animator.SetFloat("Speed")` → 朝向移动方向 → 生成脚印 |
-| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `PickUp` 标签对象 → 禁用该对象，`count++`，更新 UI |
-| `OnCollisionEnter(Collision)` | 碰撞回调 | 碰到 `Enemy` 标签对象 → 销毁玩家 → `ShowGameOver()` |
-| `SetCountText()` | 自定义 | 更新得分为"得分: N"；当 `count >= 4` → `ShowGameOver()`，销毁所有 Enemy |
-| `ShowGameOver()` | 自定义 | 显示游戏结束面板，`Time.timeScale = 0` 暂停 |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `PickUp` 标签 → `Destroy` 对象 → `ExpBar.AddExp(10f)` → 播放拾取音效 |
+| `OnCollisionStay(Collision)` | 碰撞回调 | 碰到 `Enemy` 标签 → `HealthBar.TakeDamage(20f * Time.deltaTime)` → 播放受伤音效 → 血量归零则销毁玩家 + `ShowGameOver()` |
+| `ShowGameOver()` | 自定义 | 显示游戏结束面板，播放游戏结束音效，`Time.timeScale = 0` 暂停 |
 | `RestartGame()` | public | `SceneManager.LoadScene()` 重新开始 |
 | `QuitGame()` | public | `Application.Quit()` 退出游戏 |
-| `FireFireball()` | 自定义 | 在角色前方生成火球实例，朝角色朝向发射 |
+| `FireFireball()` | 自定义 | 在角色前方生成火球实例，朝角色朝向发射，播放发射音效 |
 
 **核心逻辑流**:
 
@@ -134,28 +135,32 @@ Input → FixedUpdate → rb.velocity (恒定速度，保留Y轴)
                        ├── animator.SetFloat("Speed") → 动画状态机驱动
                        ├── Quaternion.Slerp → 朝向移动方向 (magnitude > 0.1f)
                        └── 脚印生成 (距离间隔 + 左右交替 + 旋转修正)
-Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
+Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音效
                                         ↓
-                              OnCollisionEnter(Enemy) → ShowGameOver (失败)
-                              OnTriggerEnter(PickUp)  → count++
-                                  └── count >= 4 → ShowGameOver (胜利)
+                              OnCollisionStay(Enemy) → HealthBar.TakeDamage → 音效
+                                  └── IsDead → Destroy(Player) → ShowGameOver (失败)
+                              OnTriggerEnter(PickUp) → Destroy + ExpBar.AddExp(10f) + 音效
 ```
 
 ### 2.3 EnemyMovement.cs
 
-**职责**: 敌人 AI 追踪行为。
+**职责**: 敌人 AI 追踪行为 + 死亡掉落经验方块。
 
 **依赖**: `UnityEngine`, `UnityEngine.AI`
 
 | 字段 | 类型 | 可见性 | 说明 |
 |---|---|---|---|
 | `player` | `Transform` | public | 追踪目标 (玩家) |
+| `pickUpPrefab` | `GameObject` | public | 死亡掉落的经验方块 Prefab |
 | `navMeshAgent` | `NavMeshAgent` | private | NavMesh 代理 |
+| `isQuitting` | `bool` | private | 是否正在退出应用（防止退出时误触发掉落） |
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
 | `Start()` | 初始化 | 获取 `NavMeshAgent` 组件 |
 | `Update()` | 每帧 | 若 `player` 不为空，调用 `navMeshAgent.SetDestination(player.position)` |
+| `OnApplicationQuit()` | 应用退出 | 设置 `isQuitting = true` |
+| `OnDestroy()` | 销毁回调 | 若非退出应用且 `pickUpPrefab` 不为空 → 在死亡位置生成经验方块（父物体为场景中的 "PickUp" 对象） |
 
 **NavMeshAgent 场景参数**:
 
@@ -184,11 +189,103 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
 |---|---|---|
 | `Start()` | 初始化 | `Destroy(gameObject, lifetime)`；忽略与 Player 的碰撞（`Physics.IgnoreCollision`） |
 | `Update()` | 每帧 | `transform.position += transform.forward * speed * Time.deltaTime` |
-| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `Enemy` 标签 → `Destroy(other.gameObject)` 消灭敌人；然后 `Destroy(gameObject)` 自毁 |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `Enemy` 标签 → `Destroy` 敌人 + 播放敌人死亡音效；然后播放命中音效 + `Destroy` 自毁 |
 
 **设计要点**: 火球使用 `transform.forward` 直线飞行，不依赖 Rigidbody。通过 `Physics.IgnoreCollision` 避免与发射者碰撞。命中任何物体后自毁。
 
-### 2.5 Footprint.cs
+### 2.5 EnemySpawner.cs
+
+**职责**: 敌人持续生成系统，从屏幕外刷新敌人。
+
+**依赖**: `UnityEngine`, `UnityEngine.AI`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `enemyPrefab` | `GameObject` | public | 敌人 Prefab |
+| `player` | `Transform` | public | 玩家 Transform（传递给生成的敌人） |
+| `maxCount` | `int` | public | 最大敌人数，默认 `30` |
+| `spawnInterval` | `float` | public | 生成间隔，默认 `0.5` 秒 |
+| `spawnMargin` | `float` | public | 屏幕外边距，默认 `2` |
+| `enemyGo` | `GameObject` | public | 敌人父物体 |
+| `mainCamera` | `Camera` | private | 主摄像机 |
+| `timer` | `float` | private | 计时器 |
+| `enemies` | `List<GameObject>` | private | 已生成敌人列表 |
+
+| 方法 | 生命周期 | 逻辑 |
+|---|---|---|
+| `Start()` | 初始化 | 获取主摄像机，初始化计时器 |
+| `Update()` | 每帧 | 累加计时器，达到间隔 → `SpawnEnemy()` |
+| `SpawnEnemy()` | 自定义 | 清理空引用，检查上限 → `GetSpawnPositionOutsideViewport()` → 实例化敌人 → 设置追踪目标 |
+| `GetSpawnPositionOutsideViewport()` | 自定义 | 计算摄像机视口四角的世界坐标 → 在视口外边缘随机选点 → `NavMesh.SamplePosition` 采样 |
+
+**设计要点**: 使用 `Camera.ViewportPointToRay` 将屏幕四角投射到地面，计算可视范围外边缘。通过 `NavMesh.SamplePosition` 确保敌人生成在 NavMesh 上。
+
+### 2.6 AudioManager.cs
+
+**职责**: 音效管理器（单例模式），统一管理所有游戏音效。
+
+**依赖**: `UnityEngine`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `Instance` | `AudioManager` | public static | 单例实例 |
+| `fireballLaunch` | `AudioSource` | public | 火球发射音效 |
+| `fireballHit` | `AudioSource` | public | 火球命中音效 |
+| `enemyDeath` | `AudioSource` | public | 敌人死亡音效 |
+| `playerHurt` | `AudioSource` | public | 玩家受伤音效 |
+| `playerDeath` | `AudioSource` | public | 玩家死亡音效 |
+| `pickupExp` | `AudioSource` | public | 拾取经验音效 |
+| `levelUp` | `AudioSource` | public | 升级音效 |
+| `gameOver` | `AudioSource` | public | 游戏结束音效 |
+
+| 方法 | 生命周期 | 逻辑 |
+|---|---|---|
+| `Awake()` | 初始化 | 单例模式：若 Instance 为空则赋值，否则销毁自身 |
+| `Play*()` | public | 8 个播放方法，各自检查 AudioSource 不为空后播放 |
+
+**设计要点**: 单例模式 (`Instance`)，全局可通过 `AudioManager.Instance?.PlayXxx()` 调用。8 种音效覆盖所有游戏事件。
+
+### 2.7 HealthBar.cs
+
+**职责**: 血量条 UI 管理。
+
+**依赖**: `UnityEngine`, `UnityEngine.UI`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `fillRect` | `RectTransform` | public | 血量条填充矩形 |
+| `maxHealth` | `float` | public | 最大血量，默认 `100` |
+| `currentHealth` | `float` | private | 当前血量 |
+
+| 方法 | 生命周期 | 逻辑 |
+|---|---|---|
+| `Start()` | 初始化 | `currentHealth = maxHealth`，`UpdateFill()` |
+| `TakeDamage(float)` | public | 扣血 `currentHealth = Max(0, currentHealth - damage)`，`UpdateFill()` |
+| `IsDead()` | public | 返回 `currentHealth <= 0` |
+| `UpdateFill()` | 自定义 | 设置 `fillRect.anchorMax.x = currentHealth / maxHealth` |
+
+### 2.8 ExpBar.cs
+
+**职责**: 经验条 UI + 升级系统。
+
+**依赖**: `UnityEngine`, `TMPro`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `fillRect` | `RectTransform` | public | 经验条填充矩形 |
+| `levelText` | `TextMeshProUGUI` | public | 等级文本 |
+| `maxExp` | `float` | public | 升级所需经验，初始 `100` |
+| `currentExp` | `float` | private | 当前经验 |
+| `level` | `int` | public | 当前等级，初始 `1` |
+
+| 方法 | 生命周期 | 逻辑 |
+|---|---|---|
+| `Start()` | 初始化 | `currentExp = 0`，`UpdateFill()`，`UpdateLevelText()` |
+| `AddExp(float)` | public | 增加经验，若溢出则升级：`level++`，`maxExp += 20`，播放升级音效 |
+| `UpdateFill()` | 自定义 | 设置 `fillRect.anchorMax.x = currentExp / maxExp` |
+| `UpdateLevelText()` | 自定义 | 设置文本为 `"Lv. " + level` |
+
+### 2.9 Footprint.cs
 
 **职责**: 脚印渐隐消失效果（URP 适配版）。
 
@@ -205,7 +302,7 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
 
 **URP 适配**: 材质属性从 Built-in 的 `_Color` 改为 URP 的 `_BaseColor`。
 
-### 2.6 Rotator.cs
+### 2.10 Rotator.cs
 
 **职责**: 装饰性旋转动画，应用于收集品。
 
@@ -271,7 +368,7 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
 │   ├── DynamicBox       [4 个 DynamicBox Prefab 堆叠]
 │   ├── DynamicBox (1)   [4 个 DynamicBox Prefab 堆叠]
 │   └── DynamicBox (2)   [4 个 DynamicBox Prefab 堆叠]
-├── Player                [CapsuleCollider, Rigidbody(freezeRotation=true), Animator, PlayerController]
+├── Player                [CapsuleCollider, Rigidbody(freezeRotation=true), Animator, PlayerController, HealthBar, ExpBar]
 │   ├── Foot              [脚印父物体]
 │   ├── Skill             [技能特效父物体]
 │   └── GeneratedModel    [MeshFilter, MeshRenderer, CapsuleCollider]
@@ -281,14 +378,14 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞)
 │   ├── North Wall       [BoxCollider, Cube Mesh (旋转90°)]
 │   └── South Wall       [BoxCollider, Cube Mesh (旋转90°)]
 ├── PickUp Parent         [父对象]
-│   ├── PickUp           [Prefab 实例]
-│   ├── PickUp (1)       [Prefab 实例]
-│   ├── PickUp (2)       [Prefab 实例]
-│   └── PickUp (3)       [Prefab 实例]
+│   └── PickUp           [Prefab 实例（动态生成）]
 ├── Canvas               [Canvas, CanvasScaler, GraphicRaycaster]
-│   ├── CountText        [TextMeshProUGUI]
-│   └── GameOverPanel    [GameObject, ResultText, RestartButton, QuitButton]
+│   ├── HealthBar        [RectTransform fillRect]
+│   ├── ExpBar           [RectTransform fillRect, TextMeshProUGUI levelText]
+│   ├── GameOverPanel    [GameObject, ResultText, RestartButton, QuitButton]
+│   └── AudioManager     [AudioSource x8]
 ├── EventSystem           [EventSystem, StandaloneInputModule]
+├── EnemySpawner          [EnemySpawner]
 └── Enemy                 [父对象]
     └── EnemyBody        [NavMeshAgent, EnemyMovement, BoxCollider]
 ```
@@ -452,15 +549,18 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 6 个脚本，约 250 行代码，结构简洁清晰 |
-| 架构模式 | 经典 MonoBehaviour 组件模式，脚本间通过 Inspector 引用耦合 |
+| 代码规模 | 10 个脚本，约 400 行代码，结构清晰 |
+| 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
 | 战斗系统 | 鼠标左键发射火球，VFX Graph 视觉 + SphereCollider 碰撞检测 |
+| 血量系统 | HealthBar：100 HP，OnCollisionStay 持续扣血，归零判定失败 |
+| 经验系统 | ExpBar：收集 +10 EXP，满 100 升级，每级 maxExp +20 |
+| 敌人生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
-| UI 系统 | uGUI Canvas + TextMeshPro + 游戏结束面板（重新开始/退出） |
+| UI 系统 | uGUI Canvas + TextMeshPro + 血量条 + 经验条 + 游戏结束面板 |
 | 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
-| 音频系统 | 无 |
+| 音频系统 | AudioManager 单例，8 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
-| 资源管理 | AI 生成模型/贴图/动画 (Meshy AI)；VFX Graph 特效；其余为内置图元 |
+| 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效 |
 | 持久化 | 无 (无存档系统) |

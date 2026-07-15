@@ -30,12 +30,12 @@ public class Fireball : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // 消灭敌人
         if (other.CompareTag("Enemy"))
         {
             Destroy(other.gameObject);
+            AudioManager.Instance?.PlayEnemyDeath();
         }
-        // 撞击自毁
+        AudioManager.Instance?.PlayFireballHit();
         Destroy(gameObject);
     }
 }

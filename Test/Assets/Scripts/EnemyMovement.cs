@@ -6,20 +6,35 @@ using UnityEngine.AI;
 public class EnemyMovement : MonoBehaviour
 {
     public Transform player;
-    private NavMeshAgent navMeshAgent;
+    public GameObject pickUpPrefab;
 
-    // Start is called before the first frame update
+    private NavMeshAgent navMeshAgent;
+    private bool isQuitting;
+
     void Start()
     {
         navMeshAgent = GetComponent<NavMeshAgent>();
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (player != null)
        {    
            navMeshAgent.SetDestination(player.position);
        }
+    }
+
+    void OnApplicationQuit()
+    {
+        isQuitting = true;
+    }
+
+    void OnDestroy()
+    {
+        if (isQuitting || pickUpPrefab == null)
+            return;
+
+        Transform parent = GameObject.Find("PickUp")?.transform;
+        Instantiate(pickUpPrefab, transform.position, Quaternion.identity, parent);
     }
 }
