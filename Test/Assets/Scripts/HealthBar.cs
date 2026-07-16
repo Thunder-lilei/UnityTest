@@ -24,6 +24,17 @@ public class HealthBar : MonoBehaviour
         return currentHealth <= 0f;
     }
 
+    public bool IsFull()
+    {
+        return currentHealth >= maxHealth;
+    }
+
+    public void Heal(float amount)
+    {
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        UpdateFill();
+    }
+
     void UpdateFill()
     {
         if (fillRect != null)

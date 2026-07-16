@@ -230,6 +230,52 @@ Instantiate(pickUpPrefab, transform.position, Quaternion.identity, parent);
 
 > **关键原则**：**Prefab 资产只能引用项目资产，不能引用场景对象。** 如果需要引用场景中的对象，应在运行时通过 `GameObject.Find()` 或 `FindWithTag()` 等方式查找。
 
+### 问题9：音频播放延迟
+
+**现象**：游戏中触发音效时，声音有明显延迟，不是即时播放。
+
+**原因**：Unity 音频导入器默认 `Preload Audio Data = False`。音频文件在场景加载时不会被解码到内存，而是在**首次播放时**才实时解压加载。MP3/Vorbis 格式的解码需要时间，造成延迟。
+
+**解决方案**：选中音频文件 → Inspector → 勾选 **Preload Audio Data** → Apply。
+
+或在代码中修改：
+
+```csharp
+var importer = AssetImporter.GetAtPath("Assets/xxx.mp3") as AudioImporter;
+var s = importer.defaultSampleSettings;
+s.preloadAudioData = true;
+importer.defaultSampleSettings = s;
+importer.SaveAndReimport();
+```
+
+**Preload Audio Data 开启/关闭对比**：
+
+| | 开启 (true) | 关闭 (false) |
+|---|---|---|
+| 播放延迟 | 无 | 首次播放有延迟 |
+| 内存占用 | 高（解压后驻留） | 低（按需加载） |
+| 场景加载时间 | 略长 | 快 |
+| 适用场景 | 短音效 (SFX) | 长音频 (BGM) |
+
+**原则**：
+- **短音效**（1-3秒）：始终开启，内存开销可忽略
+- **长音频**（BGM、几十秒以上）：关闭 preload，改用 **Streaming** 流式加载，边播边读，避免一次性占用大量内存
+
+### 问题10：Unity 组件一对一原则
+
+**结论**：一个 GameObject 上**同类型的组件只能有一个**。
+
+**体现**：
+- `GetComponent<HealthBar>()` 直接用类型获取，不需要索引或名称区分
+- `AddComponent<HealthBar>()` 如果已存在同类型组件，返回已有的，不会新增
+- 因此脚本设计时，一个组件类代表一种职责，挂在同一 GameObject 上只此一份
+
+**基类的特殊情况**：`Collider` 是基类，`BoxCollider`、`SphereCollider`、`CapsuleCollider` 是不同子类型，可以同时挂在一个 GameObject 上。但 `GetComponent<Collider>()` 只返回找到的第一个。
+
+**设计启示**：
+- 需要多个同功能实例时（如多个 AudioSource），应该用**子 GameObject** 拆分，而不是在一个 GameObject 上重复挂载
+- 本项目 AudioManager 就是这种做法：8 个子 GameObject 各挂一个 AudioSource，父对象 AudioManager 脚本统一管理
+
 ---
 
 ## 知识点积累
@@ -242,6 +288,36 @@ Rigidbody 组件中勾选 **Constraints → Freeze Rotation** 的 **X** 和 **Z*
 - **保留 Y 旋转**：角色仍可正常转向
 
 这是第三人称/第一人称角色控制的常见处理方式，避免用 AddForce 移动时角色因碰撞而东倒西歪。
+
+### Null 条件运算符 `?.`
+
+**含义**：`?.` 在调用前自动判空。如果左侧为 null，整个表达式直接返回 null（跳过后续调用）；不为 null 则正常执行。
+
+**语法**：
+
+```csharp
+对象?.方法()
+对象?.属性
+```
+
+**等价写法**：
+
+```csharp
+AudioManager.Instance?.PlayPlayerHurt();
+
+// 等价于
+if (AudioManager.Instance != null)
+    AudioManager.Instance.PlayPlayerHurt();
+```
+
+**适用场景**：
+- **单例访问**：`AudioManager.Instance` 可能尚未初始化
+- **事件调用**：`事件?.Invoke()` 避免 null delegate 异常
+- **链式调用**：`player?.transform?.position` 逐级判空
+
+**注意**：
+- `?.` 只对**引用类型**（class、interface、delegate）有效，值类型（int、struct）不行
+- 如果方法有返回值，`?.` 返回的是**可空类型**，如 `int?`
 
 ---
 

@@ -158,3 +158,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 0}
   pickUpPrefab: {fileID: 2997823801155477149, guid: 6f91ad1d12432e5419668296f776d695, type: 3}
+  healthPotionPrefab: {fileID: 6952577120094151519, guid: 3beb045f1cd05d04191a807164c9e335, type: 3}
+  dropChance: 0.3

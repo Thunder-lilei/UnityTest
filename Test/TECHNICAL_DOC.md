@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-15)
+> **文档日期**: 2026-07-10 (更新: 2026-07-16)
 
 ---
 
@@ -31,6 +31,7 @@
 |---|---|
 | `PickUp` | 可收集物品 |
 | `Enemy` | 敌人实体 |
+| `HealthPotion` | 血瓶拾取物 |
 
 ### 1.3 层级 (Layers)
 
@@ -68,14 +69,14 @@
 Assets/Scripts/
 ├── CameraController.cs    — 摄像机跟随
 ├── PlayerController.cs    — 玩家控制、动画驱动、脚印、火球攻击、经验/血量、游戏状态
-├── EnemyMovement.cs       — 敌人 AI 寻路 + 死亡掉落经验方块
+├── EnemyMovement.cs       — 敌人 AI 寻路 + 死亡掉落经验方块和血瓶
 ├── EnemySpawner.cs        — 敌人持续生成（屏幕外刷新，NavMesh 采样）
 ├── FireBall.cs            — 火球飞行与碰撞
 ├── Footprint.cs           — 脚印渐隐消失
-├── AudioManager.cs        — 音效管理器（单例，8 种音效）
-├── HealthBar.cs           — 血量条 UI（100 HP，扣血，死亡判定）
+├── AudioManager.cs        — 音效管理器（单例，9 种音效）
+├── HealthBar.cs           — 血量条 UI（100 HP，扣血/回血，死亡判定）
 ├── ExpBar.cs              — 经验条 UI + 升级系统（100 EXP 升级，每级 +20）
-└── Rotator.cs             — 收集品旋转动画
+└── Rotator.cs             — 收集品/血瓶旋转动画
 ```
 
 ### 2.1 CameraController.cs
@@ -121,12 +122,12 @@ Assets/Scripts/
 | `Start()` | 初始化 | 获取 `Rigidbody` 和 `Animator`，隐藏面板，记录初始位置，获取主摄像机 |
 | `Update()` | 每帧 | 检测鼠标左键 → `FireFireball()` |
 | `FixedUpdate()` | 物理帧 | 读取输入 → `rb.velocity` 恒定速度移动（保留 Y 轴） → `animator.SetFloat("Speed")` → 朝向移动方向 → 生成脚印 |
-| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `PickUp` 标签 → `Destroy` 对象 → `ExpBar.AddExp(10f)` → 播放拾取音效 |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `PickUp` 标签 → `Destroy` + `ExpBar.AddExp(10f)` + 音效；碰到 `HealthPotion` 标签 → 若血量未满则 `Destroy` + `HealthBar.Heal(30f)` + 音效 |
 | `OnCollisionStay(Collision)` | 碰撞回调 | 碰到 `Enemy` 标签 → `HealthBar.TakeDamage(20f * Time.deltaTime)` → 播放受伤音效 → 血量归零则销毁玩家 + `ShowGameOver()` |
 | `ShowGameOver()` | 自定义 | 显示游戏结束面板，播放游戏结束音效，`Time.timeScale = 0` 暂停 |
 | `RestartGame()` | public | `SceneManager.LoadScene()` 重新开始 |
 | `QuitGame()` | public | `Application.Quit()` 退出游戏 |
-| `FireFireball()` | 自定义 | 在角色前方生成火球实例，朝角色朝向发射，播放发射音效 |
+| `FireFireball()` | 自定义 | 鼠标位置射线投射到地面 → 计算方向 → 在角色前方生成火球实例 → 播放发射音效 |
 
 **核心逻辑流**:
 
@@ -152,6 +153,8 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 |---|---|---|---|
 | `player` | `Transform` | public | 追踪目标 (玩家) |
 | `pickUpPrefab` | `GameObject` | public | 死亡掉落的经验方块 Prefab |
+| `healthPotionPrefab` | `GameObject` | public | 死亡掉落的血瓶 Prefab |
+| `dropChance` | `float` | public | 血瓶掉落概率，默认 `0.3` |
 | `navMeshAgent` | `NavMeshAgent` | private | NavMesh 代理 |
 | `isQuitting` | `bool` | private | 是否正在退出应用（防止退出时误触发掉落） |
 
@@ -160,7 +163,7 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 | `Start()` | 初始化 | 获取 `NavMeshAgent` 组件 |
 | `Update()` | 每帧 | 若 `player` 不为空，调用 `navMeshAgent.SetDestination(player.position)` |
 | `OnApplicationQuit()` | 应用退出 | 设置 `isQuitting = true` |
-| `OnDestroy()` | 销毁回调 | 若非退出应用且 `pickUpPrefab` 不为空 → 在死亡位置生成经验方块（父物体为场景中的 "PickUp" 对象） |
+| `OnDestroy()` | 销毁回调 | 若非退出应用 → 在死亡位置生成经验方块（左侧偏移0.5）+ 概率掉落血瓶（右侧偏移0.5，Y轴+0.5） |
 
 **NavMeshAgent 场景参数**:
 
@@ -187,11 +190,11 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Start()` | 初始化 | `Destroy(gameObject, lifetime)`；忽略与 Player 的碰撞（`Physics.IgnoreCollision`） |
+| `Start()` | 初始化 | `Destroy(gameObject, lifetime)`；缓存 Player Transform 引用 |
 | `Update()` | 每帧 | `transform.position += transform.forward * speed * Time.deltaTime` |
-| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `Enemy` 标签 → `Destroy` 敌人 + 播放敌人死亡音效；然后播放命中音效 + `Destroy` 自毁 |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 忽略 Player 及其子对象的碰撞（`transform.IsChildOf`）；碰到 `Enemy` 标签 → `Destroy` 敌人 + 播放敌人死亡音效；然后播放命中音效 + `Destroy` 自毁 |
 
-**设计要点**: 火球使用 `transform.forward` 直线飞行，不依赖 Rigidbody。通过 `Physics.IgnoreCollision` 避免与发射者碰撞。命中任何物体后自毁。
+**设计要点**: 火球使用 `transform.forward` 直线飞行，不依赖 Rigidbody。通过 `transform.IsChildOf(playerRoot)` 忽略发射者及其子对象碰撞。命中任何物体后自毁。发射方向由鼠标位置射线投射到地面决定。
 
 ### 2.5 EnemySpawner.cs
 
@@ -237,13 +240,14 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 | `pickupExp` | `AudioSource` | public | 拾取经验音效 |
 | `levelUp` | `AudioSource` | public | 升级音效 |
 | `gameOver` | `AudioSource` | public | 游戏结束音效 |
+| `healthPotionPickup` | `AudioSource` | public | 拾取血瓶音效 |
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
 | `Awake()` | 初始化 | 单例模式：若 Instance 为空则赋值，否则销毁自身 |
-| `Play*()` | public | 8 个播放方法，各自检查 AudioSource 不为空后播放 |
+| `Play*()` | public | 9 个播放方法，各自检查 AudioSource 不为空后播放 |
 
-**设计要点**: 单例模式 (`Instance`)，全局可通过 `AudioManager.Instance?.PlayXxx()` 调用。8 种音效覆盖所有游戏事件。
+**设计要点**: 单例模式 (`Instance`)，全局可通过 `AudioManager.Instance?.PlayXxx()` 调用。9 种音效覆盖所有游戏事件。
 
 ### 2.7 HealthBar.cs
 
@@ -261,7 +265,9 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 |---|---|---|
 | `Start()` | 初始化 | `currentHealth = maxHealth`，`UpdateFill()` |
 | `TakeDamage(float)` | public | 扣血 `currentHealth = Max(0, currentHealth - damage)`，`UpdateFill()` |
+| `Heal(float)` | public | 回血 `currentHealth = Min(maxHealth, currentHealth + amount)`，`UpdateFill()` |
 | `IsDead()` | public | 返回 `currentHealth <= 0` |
+| `IsFull()` | public | 返回 `currentHealth >= maxHealth` |
 | `UpdateFill()` | 自定义 | 设置 `fillRect.anchorMax.x = currentHealth / maxHealth` |
 
 ### 2.8 ExpBar.cs
@@ -502,9 +508,10 @@ wall│     [DynamicBox堆]        │  wall
 | FootprintMat | 半透明 | - | 脚印 (RenderQueue=3000) |
 | Enemy | 红色 (1, 0, 0) | 0.50 | EnemyBody 方块 |
 | PickUp | 金色 (1, 0.78, 0) | 0.25 | 收集品方块 |
-| wall | 深灰 (0.31, 0.31, 0.31) | 0.25 | 墙壁、地面、静态障碍 |
+| HealthBar | 灰色 (0.51, 0.51, 0.51) | 0.25 | 地面 |
+| wall | 深灰 (0.31, 0.31, 0.31) | 0.25 | 墙壁、静态障碍 |
 | Dynamic Obstacle | 黑色 (0, 0, 0) | 0.50 | 动态方块 |
-| Background | 灰色 (0.51, 0.51, 0.51) | 0.25 | (备用) |
+| HealthPotion | 红色 (0.8, 0.1, 0.1) | 0.50 | 血瓶模型 |
 
 AI 生成角色使用贴图材质，其余材质已迁移至 URP Lit/Unlit Shader。
 
@@ -549,7 +556,7 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 10 个脚本，约 400 行代码，结构清晰 |
+| 代码规模 | 10 个脚本，约 450 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
@@ -560,7 +567,7 @@ Builds/
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
 | UI 系统 | uGUI Canvas + TextMeshPro + 血量条 + 经验条 + 游戏结束面板 |
 | 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
-| 音频系统 | AudioManager 单例，8 种 AI 生成 SFX 音效 |
+| 音频系统 | AudioManager 单例，9 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
 | 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效 |
 | 持久化 | 无 (无存档系统) |

@@ -92,6 +92,16 @@ public class PlayerController : MonoBehaviour
                 expBar.AddExp(10f);
             AudioManager.Instance?.PlayPickupExp();
         }
+        else if (other.gameObject.CompareTag("HealthPotion"))
+        {
+            HealthBar healthBar = GetComponent<HealthBar>();
+            if (healthBar != null && !healthBar.IsFull())
+            {
+                Destroy(other.gameObject);
+                healthBar.Heal(30f);
+                AudioManager.Instance?.PlayHealthPotionPickup();
+            }
+        }
         
     }
 

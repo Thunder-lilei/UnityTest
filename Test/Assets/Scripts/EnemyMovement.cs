@@ -7,6 +7,8 @@ public class EnemyMovement : MonoBehaviour
 {
     public Transform player;
     public GameObject pickUpPrefab;
+    public GameObject healthPotionPrefab;
+    public float dropChance = 0.3f;
 
     private NavMeshAgent navMeshAgent;
     private bool isQuitting;
@@ -31,10 +33,15 @@ public class EnemyMovement : MonoBehaviour
 
     void OnDestroy()
     {
-        if (isQuitting || pickUpPrefab == null)
+        if (isQuitting)
             return;
 
         Transform parent = GameObject.Find("PickUp")?.transform;
-        Instantiate(pickUpPrefab, transform.position, Quaternion.identity, parent);
+
+        if (pickUpPrefab != null)
+            Instantiate(pickUpPrefab, transform.position + Vector3.left * 0.5f + Vector3.up * 0.5f, Quaternion.identity, parent);
+
+        if (healthPotionPrefab != null && Random.value <= dropChance)
+            Instantiate(healthPotionPrefab, transform.position + Vector3.right * 0.5f + Vector3.up * 0.5f, Quaternion.identity, parent);
     }
 }

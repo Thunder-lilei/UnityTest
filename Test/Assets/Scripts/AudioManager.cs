@@ -12,6 +12,7 @@ public class AudioManager : MonoBehaviour
     public AudioSource pickupExp;
     public AudioSource levelUp;
     public AudioSource gameOver;
+    public AudioSource healthPotionPickup;
 
     void Awake()
     {
@@ -29,4 +30,5 @@ public class AudioManager : MonoBehaviour
     public void PlayPickupExp() { if (pickupExp != null) pickupExp.Play(); }
     public void PlayLevelUp() { if (levelUp != null) levelUp.Play(); }
     public void PlayGameOver() { if (gameOver != null) gameOver.Play(); }
+    public void PlayHealthPotionPickup() { if (healthPotionPickup != null) healthPotionPickup.Play(); }
 }

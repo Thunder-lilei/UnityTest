@@ -1,6 +1,6 @@
 # UnityTest
 
-基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、血量/经验系统、敌人持续生成、音效系统和脚印系统。
+基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、血量/经验系统、血瓶掉落、敌人持续生成、音效系统和脚印系统。
 
 ## 环境要求
 
@@ -14,8 +14,8 @@
 Test/
 ├── Assets/
 │   ├── Characters/             # 角色 Prefab（AI 生成）
-│   ├── Materials/              # 材质（Player/Enemy/PickUp/Wall/Background/Footprint）
-│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall）
+│   ├── Materials/              # 材质（PickUp/Wall/Background/Footprint/HealthPotion）
+│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion）
 │   ├── Quaternius/             # Quaternius 3D 模型资源（敌人模型）
 │   ├── Scenes/
 │   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
@@ -39,9 +39,10 @@ Test/
 ## 游戏玩法
 
 - **WASD / 方向键**：控制角色移动（恒定速度，非物理力驱动）
-- **鼠标左键**：发射火球攻击敌人
+- **鼠标左键**：朝鼠标指向方向发射火球攻击敌人
 - 角色自动朝向移动方向，行走时留下渐隐脚印
 - 收集经验方块升级，火球消灭敌人也会掉落经验
+- 敌人被消灭后有概率掉落血瓶，拾取可恢复血量
 - 敌人持续从屏幕外刷新，碰到玩家扣血，血量归零则失败
 - 胜利或失败后弹出面板，可选择**重新开始**或**退出游戏**
 
@@ -53,12 +54,13 @@ Test/
 | Animator 状态机 | Speed 参数驱动 Idle ↔ Walk ↔ Run 过渡，Action 触发特殊动作 |
 | 恒定速度移动 | 使用 rb.velocity 替代 AddForce，避免加速感；保留 Y 轴速度避免穿模 |
 | 朝向移动方向 | Quaternion.Slerp 平滑转向 |
-| 火球攻击 | 鼠标左键发射火球，VFX Graph 粒子特效，命中敌人即消灭 |
+| 火球攻击 | 鼠标左键朝鼠标指向方向发射火球，VFX Graph 粒子特效，命中敌人即消灭 |
 | 血量系统 | HealthBar：100 HP，敌人接触持续扣血，归零则失败 |
+| 血瓶掉落 | 敌人死亡 30% 概率掉落血瓶，拾取恢复 30 HP，血量满时不可拾取 |
 | 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
 | 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
-| 音效系统 | AudioManager 单例：8 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取/升级/游戏结束） |
+| 音效系统 | AudioManager 单例：9 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/游戏结束） |
 | 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失 |
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
@@ -80,6 +82,18 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ## 更新日志
+
+### v0.5 (2026-07-16)
+
+- 新增血瓶系统：敌人死亡 30% 概率掉落血瓶，拾取恢复 30 HP，血量满时不可拾取
+- 新增 HealthPotion Prefab（KayKit 药水瓶 3D 模型，红色材质，Rotator 旋转）
+- 新增拾取血瓶音效（AI 生成 SFX，共 9 种音效）
+- HealthBar 新增 `Heal()` 和 `IsFull()` 方法
+- EnemyMovement 新增 `healthPotionPrefab` 和 `dropChance` 字段，掉落物左右错开生成
+- 火球发射改为朝鼠标指向方向（ScreenPointToRay + Physics.Raycast）
+- 导入 KayKit 和 Kenney 模型资产包
+- Ground 材质从 wall.mat 改为 Background.mat
+- 清理 7 个冗余资产（旧 Player/Enemy 材质、未使用的下载模型）
 
 ### v0.4 (2026-07-15)
 
