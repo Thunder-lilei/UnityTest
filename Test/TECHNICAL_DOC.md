@@ -184,7 +184,7 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 
 ### 2.4 FireBall.cs
 
-**职责**: 火球飞行、碰撞检测与敌人消灭。
+**职责**: 火球飞行、碰撞检测与敌人扣血。
 
 **依赖**: `UnityEngine`
 
@@ -195,11 +195,11 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Start()` | 初始化 | `Destroy(gameObject, lifetime)`；缓存 Player Transform 引用 |
-| `Update()` | 每帧 | `transform.position += transform.forward * speed * Time.deltaTime` |
-| `OnTriggerEnter(Collider)` | 碰撞回调 | 忽略 Player 及其子对象的碰撞（`transform.IsChildOf`）；碰到 `Enemy` 标签 → `Destroy` 敌人 + 播放敌人死亡音效；然后播放命中音效 + `Destroy` 自毁 |
+| `OnSpawn()` | 对象池激活 | 重置计时器 |
+| `Update()` | 每帧 | 前移 + 计时器超时回收 |
+| `OnTriggerEnter(Collider)` | 碰撞回调 | 碰到 `Enemy` → `enemy.TakeDamage(1f)`（不再直接 Destroy）+ 播放命中音效 + 回收火球 |
 
-**设计要点**: 火球使用 `transform.forward` 直线飞行，不依赖 Rigidbody。通过 `transform.IsChildOf(playerRoot)` 忽略发射者及其子对象碰撞。命中任何物体后自毁。发射方向由鼠标位置射线投射到地面决定。
+**设计要点**: 火球命中敌人后调用 `TakeDamage(1f)` 扣血，由敌人自行判断是否死亡。Layer 矩阵屏蔽 Player/PickUp/其他火球碰撞。
 
 ### 2.5 EnemySpawner.cs
 
@@ -601,7 +601,7 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 15 个脚本，约 750 行代码，结构清晰 |
+| 代码规模 | 15 个脚本，约 850 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
@@ -617,4 +617,6 @@ Builds/
 | 音频系统 | AudioManager 单例，10 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
 | 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效；ObjectPool 对象池复用 |
+| 难度递增 | 每10秒：生成间隔-0.02s（最低0.15s）、上限+2（最高60）、血量+1（最高10） |
+| 敌人血量 | EnemyMovement：maxHealth/currentHealth/TakeDamage/Die()，头顶 World Space Canvas 血条 |
 | 持久化 | 无 (无存档系统) |

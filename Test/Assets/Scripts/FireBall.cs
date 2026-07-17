@@ -31,8 +31,9 @@ public class Fireball : MonoBehaviour, IPooledObject
     {
         if (other.CompareTag("Enemy"))
         {
-            Destroy(other.gameObject);
-            AudioManager.Instance?.PlayEnemyDeath();
+            EnemyMovement enemy = other.GetComponent<EnemyMovement>();
+            if (enemy != null)
+                enemy.TakeDamage(1f);
         }
         AudioManager.Instance?.PlayFireballHit();
         if (pool != null)

@@ -160,3 +160,5 @@ MonoBehaviour:
   pickUpPrefab: {fileID: 2997823801155477149, guid: 6f91ad1d12432e5419668296f776d695, type: 3}
   healthPotionPrefab: {fileID: 6952577120094151519, guid: 3beb045f1cd05d04191a807164c9e335, type: 3}
   dropChance: 0.3
+  maxHealth: 2
+  healthBarPrefab: {fileID: 2240652183249777624, guid: f51a53a809f39a14589b46d2250a5860, type: 3}

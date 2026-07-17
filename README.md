@@ -15,7 +15,7 @@ Test/
 ├── Assets/
 │   ├── Characters/             # 角色 Prefab（AI 生成）
 │   ├── Materials/              # 材质（PickUp/Wall/Background/Footprint/HealthPotion）
-│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion）
+│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar）
 │   ├── Quaternius/             # Quaternius 3D 模型资源（敌人模型）
 │   ├── Scenes/
 │   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
@@ -65,6 +65,8 @@ Test/
 | 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
 | 升级选择系统 | 升级时暂停游戏，四选三随机：增加最大血量/移动速度/火球数量/吸取范围，含悬浮高亮和图标 |
 | 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
+| 难度递增 | 每10秒：生成更快（-0.02s）、上限更高（+2）、血量更高（+1） |
+| 敌人血量 | 僵尸初始2血，火球不再一击必杀，头顶显示血条 |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
 | 音效系统 | AudioManager 单例：10 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/游戏结束） |
 | 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失 |
@@ -88,6 +90,16 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ## 更新日志
+
+### v0.9 (2026-07-17)
+
+- 新增敌人血量系统：僵尸初始2血（需2发火球），不再一击必杀
+- 新增敌人头顶血条（World Space Canvas，受伤后显示，死亡时销毁）
+- 新增 EnemyHealthBar.prefab：暗红底+红色填充，面向摄像机
+- EnemyMovement：新增 maxHealth/TakeDamage/Die()，掉落逻辑移至 Die()
+- FireBall：命中改为 TakeDamage(1f)，不再直接 Destroy
+- 新增难度递增：每10秒敌人生成更快（-0.02s）、上限更高（+2）、血量更高（+1）
+- 移速保持不变
 
 ### v0.8 (2026-07-17)
 

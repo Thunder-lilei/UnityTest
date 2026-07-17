@@ -15,15 +15,23 @@ public class EnemySpawner : MonoBehaviour
     private Camera mainCamera;             // 主摄像机
     private float timer;                   // 生成计时器
     private List<GameObject> enemies = new List<GameObject>();  // 已生成敌人列表
+    private float gameTimer;               // 游戏计时器
 
     void Start()
     {
         mainCamera = Camera.main;
         timer = 0f;
+        gameTimer = 0f;
     }
 
     void Update()
     {
+        gameTimer += Time.deltaTime;
+
+        int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
+        spawnInterval = Mathf.Max(0.15f, 0.5f - difficultyLevel * 0.02f);
+        maxCount = Mathf.Min(60, 30 + difficultyLevel * 2);
+
         timer += Time.deltaTime;
 
         if (timer >= spawnInterval)
@@ -48,7 +56,11 @@ public class EnemySpawner : MonoBehaviour
 
         EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
         if (movement != null)
+        {
             movement.player = player;
+            int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
+            movement.maxHealth = Mathf.Min(10f, 2f + difficultyLevel);
+        }
 
         enemies.Add(enemy);
     }
