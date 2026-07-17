@@ -298,6 +298,71 @@ importer.SaveAndReimport();
 - 但如果脚本确实不需要某个回调，删掉空方法是好习惯，保持代码整洁
 - 真正的性能瓶颈在方法体内的逻辑（如 `GetComponent`、`Find`、`Instantiate`），不在于方法本身是否存在
 
+### 问题12：GetComponent 性能
+
+**问题**：`GetComponent<T>()` 内部遍历组件列表，在 `Update`/`OnCollisionStay` 等高频回调中每帧调用会产生开销。
+
+**优化**：在 `Start()` 中获取一次，缓存到私有字段。本项目 PlayerController 原来在 `OnCollisionStay` 和 `OnTriggerEnter` 中每帧 `GetComponent<HealthBar>()` / `GetComponent<ExpBar>()`，已改为 `Start()` 中缓存。
+
+**优先级**：Inspector 序列化引用 > Start 缓存 > 每帧 GetComponent
+
+### 问题13：GameObject.Find 性能
+
+**问题**：`GameObject.Find()` 遍历整个场景层级，O(n) 复杂度，不适合每帧调用。
+
+**优化手段优先级**：
+
+1. **序列化引用**（Inspector 拖入）— 零运行时开销
+2. **单例模式**（`AudioManager.Instance`）— 全局唯一对象
+3. **FindWithTag**（`GameObject.FindWithTag("Player")`）— 比 Find 快
+4. **Transform.Find**（`transform.Find("ChildName")`）— 只搜子层级
+5. **GameObject.Find** — 最后手段，仅在 `Start()` 中调用一次
+
+**本项目优化**：FireBall.cs 原来在 `Start()` 中用 `GameObject.Find("Player")` + `FindObjectsOfType<Fireball>()` 做碰撞忽略，已改用 Layer 矩阵替代，完全删除。
+
+### 问题14：Physics.IgnoreCollision vs Layer 碰撞矩阵
+
+**问题**：`Physics.IgnoreCollision` 逐对设置碰撞忽略，对象多时需要 N² 次调用。
+
+**Layer 碰撞矩阵方案**：
+
+- `Project Settings → Physics → Layer Collision Matrix` 中勾选/取消 Layer 间的碰撞
+- 引擎层处理，零代码开销
+- 新增对象自动生效，无需逐对调用
+
+**本项目实施**：
+
+1. 新建 3 个 Layer：Player(8)、FireBall(9)、PickUp(10)
+2. 碰撞矩阵配置：
+   - FireBall × FireBall = ❌（火球不互相碰撞）
+   - FireBall × Player = ❌（火球不碰玩家）
+   - FireBall × PickUp = ❌（火球不碰拾取物）
+3. FireBall.cs 的 `Start()` 中所有 `Physics.IgnoreCollision` 和 `FindObjectsOfType` 代码已删除
+4. `OnTriggerEnter` 中 `if (PickUp/HealthPotion) return` 也已删除（Layer 已屏蔽）
+
+**对比**：
+
+| 方案 | 优点 | 缺点 |
+|---|---|---|
+| Physics.IgnoreCollision | 精确控制单个对象对 | N² 次调用；需代码维护 |
+| Layer 碰撞矩阵 | 零代码开销；自动生效 | 需提前规划 Layer；同 Layer 行为一致 |
+
+### 问题15：材质实例泄漏
+
+**问题**：访问 `Renderer.material`（get）时，Unity 会复制一份 `sharedMaterial` 作为独立实例。这个实例不会自动销毁，需手动 `Destroy(material)`，否则内存泄漏。
+
+**三种方案对比**：
+
+| 方案 | 独立颜色 | 内存泄漏 | 适用场景 |
+|---|---|---|---|
+| `.material` | ✅ 每实例独立 | ⚠️ 需手动销毁 | 少量对象 |
+| `.sharedMaterial` | ❌ 全部共享 | ✅ 无 | 所有对象颜色相同 |
+| `MaterialPropertyBlock` | ✅ 每实例独立 | ✅ 无 | 大量对象需独立颜色 |
+
+**MaterialPropertyBlock 原理**：数据容器，传给 GPU 的 per-object 常量缓冲区，不修改材质资产本身，不创建副本。
+
+**本项目优化**：Footprint.cs 已从 `.material` 改为 `MaterialPropertyBlock`。
+
 ---
 
 ## 知识点积累

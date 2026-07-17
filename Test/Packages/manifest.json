@@ -13,6 +13,6 @@
     "com.unity.modules.animation": "1.0.0",
     "com.unity.modules.physics": "1.0.0",
     "cn.tuanjie.ai.generators": "file:C:/AIProject/UnityTest/Test/.codely-cli/extensions/TJGenerators/Packages/cn.tuanjie.ai.generators",
-    "cn.tuanjie.codely.bridge": "1.0.70"
+    "cn.tuanjie.codely.bridge": "1.0.71"
   }
 }

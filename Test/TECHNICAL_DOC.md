@@ -63,7 +63,7 @@
 
 ## 2. 脚本架构
 
-项目共包含 **13 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
+项目共包含 **15 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
 
 ```
 Assets/Scripts/
@@ -74,10 +74,12 @@ Assets/Scripts/
 ├── FireBall.cs            — 火球飞行与碰撞（对象池模式）
 ├── Footprint.cs           — 脚印渐隐消失（MaterialPropertyBlock + 对象池模式）
 ├── ObjectPool.cs          — 通用对象池（Spawn/Despawn 复用 + IPooledObject 接口）
+├── MagnetDetector.cs      — 磁吸范围检测（满血时不吸取血瓶）
+├── PickupItem.cs          — 拾取物被吸引飞行（MoveTowards）
 ├── AudioManager.cs        — 音效管理器（单例，10 种音效）
 ├── HealthBar.cs           — 血量条 UI（100 HP，扣血/回血/增加上限，死亡判定）
 ├── ExpBar.cs              — 经验条 UI + 升级系统（while 循环跨多级升级）
-├── UpgradeSystem.cs       — 升级选择系统（暂停/三选一/应用效果）
+├── UpgradeSystem.cs       — 升级选择系统（暂停/四选三/应用效果）
 ├── UpgradeCard.cs         — 升级卡片 UI（悬浮高亮/点击回调）
 └── Rotator.cs             — 收集品/血瓶旋转动画（unscaledDeltaTime）
 ```
@@ -599,14 +601,15 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 13 个脚本，约 650 行代码，结构清晰 |
+| 代码规模 | 15 个脚本，约 750 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
 | 战斗系统 | 鼠标左键发射火球，VFX Graph 视觉 + SphereCollider 碰撞检测 |
 | 血量系统 | HealthBar：100 HP，OnCollisionStay 持续扣血，归零判定失败 |
 | 经验系统 | ExpBar：收集 +10 EXP，满 100 升级，每级 maxExp +20，while 循环支持跨多级 |
-| 升级选择系统 | UpgradeSystem：暂停游戏，三选一（MaxHealth/Speed/FireballCount），悬浮高亮卡片 |
+| 升级选择系统 | UpgradeSystem：暂停游戏，四选三随机（MaxHealth/Speed/FireballCount/MagnetRange），悬浮高亮卡片 |
+| 自动吸取 | MagnetDetector + PickupItem：半径3米内自动吸引，MoveTowards 飞行，满血不吸取血瓶 |
 | 敌人生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
 | UI 系统 | uGUI Canvas + TextMeshPro + 血量条 + 经验条 + 游戏结束面板 |

@@ -29,8 +29,11 @@ Test/
 │   │   ├── AudioManager.cs     # 音效管理器（单例）
 │   │   ├── HealthBar.cs        # 血量条 UI
 │   │   ├── ExpBar.cs           # 经验条 UI + 升级系统
-│   │   ├── UpgradeSystem.cs    # 升级选择系统（暂停/三选一/应用效果）
+│   │   ├── UpgradeSystem.cs    # 升级选择系统（暂停/四选三/应用效果）
 │   │   ├── UpgradeCard.cs      # 升级卡片 UI（悬浮高亮/点击回调）
+│   │   ├── MagnetDetector.cs   # 磁吸范围检测
+│   │   ├── PickupItem.cs       # 拾取物被吸引飞行
+│   │   ├── ObjectPool.cs       # 通用对象池（Spawn/Despawn 复用）
 │   │   └── Rotator.cs          # 收集物旋转动画
 │   ├── Effects/                # VFX 特效（FireBall.vfx）
 │   └── TJGenerators/           # AI 生成资源缓存（含 SFX 音效）
@@ -60,7 +63,7 @@ Test/
 | 血量系统 | HealthBar：100 HP，敌人接触持续扣血，归零则失败 |
 | 血瓶掉落 | 敌人死亡 30% 概率掉落血瓶，拾取恢复 30 HP，血量满时不可拾取 |
 | 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
-| 升级选择系统 | 升级时暂停游戏，三选一：增加最大血量/移动速度/火球数量，含悬浮高亮和图标 |
+| 升级选择系统 | 升级时暂停游戏，四选三随机：增加最大血量/移动速度/火球数量/吸取范围，含悬浮高亮和图标 |
 | 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
 | 音效系统 | AudioManager 单例：10 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/游戏结束） |
@@ -85,6 +88,15 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ## 更新日志
+
+### v0.8 (2026-07-17)
+
+- 新增自动吸取功能：Player 周围 3 米内自动吸引 PickUp 和血瓶
+- 新增 MagnetDetector.cs：磁吸范围检测，满血时不吸取血瓶
+- 新增 PickupItem.cs：被吸引时朝玩家飞行（MoveTowards）
+- 升级系统新增第4种选项：增加吸取范围（+1 半径），四选三随机展示
+- 新增磁铁图标 Sprite（AI 生成，蓝色磁铁，透明背景）
+- PickUp/HealthPotion Prefab 添加 PickupItem 组件
 
 ### v0.7 (2026-07-17)
 
