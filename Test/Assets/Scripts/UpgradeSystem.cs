@@ -26,6 +26,15 @@ public class UpgradeSystem : MonoBehaviour
         "\u706b\u7403\u53d1\u5c04\u6570\u91cf +1"
     };
 
+    private PlayerController player;       // 缓存 PlayerController 引用
+    private HealthBar healthBar;           // 缓存 HealthBar 引用
+
+    void Start()
+    {
+        player = GetComponent<PlayerController>();
+        healthBar = GetComponent<HealthBar>();
+    }
+
     public void ShowUpgrades()
     {
         UpgradeType[] shuffled = (UpgradeType[])allTypes.Clone();
@@ -46,15 +55,13 @@ public class UpgradeSystem : MonoBehaviour
             cards[i].SetupCallback(this);
         }
 
+        if (player != null) player.SetPaused(true);
         Time.timeScale = 0;
         upgradePanel.SetActive(true);
     }
 
     public void SelectUpgrade(UpgradeType type)
     {
-        HealthBar healthBar = GetComponent<HealthBar>();
-        PlayerController player = GetComponent<PlayerController>();
-
         switch (type)
         {
             case UpgradeType.MaxHealth:
@@ -73,6 +80,7 @@ public class UpgradeSystem : MonoBehaviour
 
         AudioManager.Instance?.PlayUpgradeConfirm();
         Time.timeScale = 1;
+        if (player != null) player.SetPaused(false);
         upgradePanel.SetActive(false);
     }
 }

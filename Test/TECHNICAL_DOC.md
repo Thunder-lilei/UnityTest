@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-17)
+> **文档日期**: 2026-07-10 (更新: 2026-07-17, v0.7)
 
 ---
 
@@ -63,7 +63,7 @@
 
 ## 2. 脚本架构
 
-项目共包含 **12 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
+项目共包含 **13 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
 
 ```
 Assets/Scripts/
@@ -71,8 +71,9 @@ Assets/Scripts/
 ├── PlayerController.cs    — 玩家控制、动画驱动、脚印、火球攻击、经验/血量、游戏状态
 ├── EnemyMovement.cs       — 敌人 AI 寻路 + 死亡掉落经验方块和血瓶
 ├── EnemySpawner.cs        — 敌人持续生成（屏幕外刷新，NavMesh 采样）
-├── FireBall.cs            — 火球飞行与碰撞
-├── Footprint.cs           — 脚印渐隐消失（MaterialPropertyBlock）
+├── FireBall.cs            — 火球飞行与碰撞（对象池模式）
+├── Footprint.cs           — 脚印渐隐消失（MaterialPropertyBlock + 对象池模式）
+├── ObjectPool.cs          — 通用对象池（Spawn/Despawn 复用 + IPooledObject 接口）
 ├── AudioManager.cs        — 音效管理器（单例，10 种音效）
 ├── HealthBar.cs           — 血量条 UI（100 HP，扣血/回血/增加上限，死亡判定）
 ├── ExpBar.cs              — 经验条 UI + 升级系统（while 循环跨多级升级）
@@ -598,7 +599,7 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 12 个脚本，约 600 行代码，结构清晰 |
+| 代码规模 | 13 个脚本，约 650 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
@@ -612,5 +613,5 @@ Builds/
 | 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
 | 音频系统 | AudioManager 单例，10 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
-| 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效 |
+| 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效；ObjectPool 对象池复用 |
 | 持久化 | 无 (无存档系统) |

@@ -86,6 +86,19 @@ Test/
 
 ## 更新日志
 
+### v0.7 (2026-07-17)
+
+- 新增对象池系统（ObjectPool）：火球和脚印预创建实例复用，减少 GC 压力
+- 新增 ObjectPool.cs 通用对象池脚本（IPooledObject 接口）
+- FireBall/Footprint 改为对象池模式，Instantiate+Destroy 替换为 Spawn+Despawn
+- 新增 Layer 碰撞矩阵：Player(8)/FireBall(9)/PickUp(10)，替代 Physics.IgnoreCollision
+- FireBall.cs 删除所有碰撞忽略代码和 FindObjectsOfType，由 Layer 矩阵处理
+- PlayerController：缓存 HealthBar/ExpBar 引用，消除每帧 GetComponent
+- PlayerController：用 isPaused 标志位替代 Time.timeScale > 0 判断输入
+- UpgradeSystem：缓存 PlayerController/HealthBar 引用，调用 SetPaused()
+- 僵尸爬行动画 loopTime 重新设为 true
+- 全部脚本补充类属性注释
+
 ### v0.6 (2026-07-17)
 
 - 新增升级选择系统：升级时暂停游戏，三张卡片三选一（增加最大血量/移动速度/火球数量）

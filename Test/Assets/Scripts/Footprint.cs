@@ -1,19 +1,26 @@
 using UnityEngine;
 
-public class Footprint : MonoBehaviour
+public class Footprint : MonoBehaviour, IPooledObject
 {
     public float lifetime = 2f;            // 脚印存活时间（秒）
     private Renderer rend;                // 脚印渲染器
     private MaterialPropertyBlock mpb;     // 材质属性块（避免创建实例材质）
     private float timer = 0f;             // 计时器
+    private ObjectPool pool;               // 所属对象池引用
 
-    void Start()
+    public void OnSpawn()
     {
-        rend = GetComponentInChildren<Renderer>();
-        mpb = new MaterialPropertyBlock();
+        timer = 0f;
+        if (mpb == null) mpb = new MaterialPropertyBlock();
+        if (rend == null) rend = GetComponentInChildren<Renderer>();
         rend.GetPropertyBlock(mpb);
         mpb.SetColor("_BaseColor", new Color(1, 1, 1, 1));
         rend.SetPropertyBlock(mpb);
+    }
+
+    public void SetPool(ObjectPool pool)
+    {
+        this.pool = pool;
     }
 
     void Update()
@@ -24,7 +31,7 @@ public class Footprint : MonoBehaviour
         mpb.SetColor("_BaseColor", new Color(1, 1, 1, alpha));
         rend.SetPropertyBlock(mpb);
 
-        if (timer >= lifetime)
-            Destroy(gameObject);
+        if (timer >= lifetime && pool != null)
+            pool.Despawn(gameObject);
     }
 }

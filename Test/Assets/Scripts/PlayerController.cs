@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour
 {
     private Rigidbody rb;                  // 玩家刚体组件
     private Animator animator;             // 玩家动画控制器
+    private HealthBar healthBar;           // 缓存血量组件
+    private ExpBar expBar;                 // 缓存经验组件
     public float speed = 10f;              // 移动速度
     public GameObject gameOverPanel;       // 游戏结束面板
     public TextMeshProUGUI resultText;     // 结束结果文本
@@ -20,6 +22,9 @@ public class PlayerController : MonoBehaviour
     public GameObject fireballPrefab;      // 火球 Prefab
     public Camera mainCamera;              // 主摄像机
     public int fireballCount = 1;          // 火球发射数量
+    private bool isPaused = false;         // 是否暂停（升级选择时）
+    private ObjectPool fireballPool;       // 火球对象池
+    private ObjectPool footprintPool;      // 脚印对象池
 
     void Start()
     {
@@ -27,15 +32,34 @@ public class PlayerController : MonoBehaviour
         gameOverPanel.SetActive(false);
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        healthBar = GetComponent<HealthBar>();
+        expBar = GetComponent<ExpBar>();
         lastFootprintPos = transform.position;
         // 获取场景主相机
         mainCamera = Camera.main;
+
+        // 初始化对象池
+        fireballPool = CreatePool(fireballPrefab, skill.transform, 5);
+        fireballPrefab.GetComponent<Fireball>()?.SetPool(fireballPool);
+        footprintPool = CreatePool(footprintPrefab, foot.transform, 20);
+        footprintPrefab.GetComponent<Footprint>()?.SetPool(footprintPool);
+    }
+
+    ObjectPool CreatePool(GameObject prefab, Transform parent, int size)
+    {
+        var poolGo = new GameObject(prefab.name + "_Pool");
+        poolGo.transform.SetParent(parent, false);
+        var pool = poolGo.AddComponent<ObjectPool>();
+        pool.prefab = prefab;
+        pool.initialSize = size;
+        pool.parent = parent;
+        return pool;
     }
 
     void Update()
     {
         // 左键按下
-        if (Input.GetMouseButtonDown(0) && Time.timeScale > 0)
+        if (Input.GetMouseButtonDown(0) && !isPaused)
         {
             FireFireball();
         }
@@ -75,7 +99,7 @@ public class PlayerController : MonoBehaviour
                 pos += transform.right * (isLeftFoot ? -0.2f : 0.2f);
                 
                 Quaternion rot = Quaternion.LookRotation(rb.velocity) * Quaternion.Euler(90, 0, 0);
-                Instantiate(footprintPrefab, pos, rot, foot.transform);
+                footprintPool.Spawn(pos, rot);
                 lastFootprintPos = transform.position;
                 isLeftFoot = !isLeftFoot;
             }
@@ -87,14 +111,12 @@ public class PlayerController : MonoBehaviour
         if (other.gameObject.CompareTag("PickUp"))
         {
             Destroy(other.gameObject);
-            ExpBar expBar = GetComponent<ExpBar>();
             if (expBar != null)
                 expBar.AddExp(10f);
             AudioManager.Instance?.PlayPickupExp();
         }
         else if (other.gameObject.CompareTag("HealthPotion"))
         {
-            HealthBar healthBar = GetComponent<HealthBar>();
             if (healthBar != null && !healthBar.IsFull())
             {
                 Destroy(other.gameObject);
@@ -108,7 +130,6 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            HealthBar healthBar = GetComponent<HealthBar>();
             if (healthBar != null)
             {
                 healthBar.TakeDamage(20f * Time.deltaTime);
@@ -121,6 +142,11 @@ public class PlayerController : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void SetPaused(bool paused)
+    {
+        isPaused = paused;
     }
 
     void ShowGameOver()
@@ -161,7 +187,7 @@ public class PlayerController : MonoBehaviour
 
             Vector3 dir = Quaternion.Euler(0, angle, 0) * direction;
             Vector3 spawnPos = transform.position + Vector3.up + dir;
-            Instantiate(fireballPrefab, spawnPos, Quaternion.LookRotation(dir), skill.transform);
+            fireballPool.Spawn(spawnPos, Quaternion.LookRotation(dir));
         }
         AudioManager.Instance?.PlayFireballLaunch();
     }
