@@ -2,25 +2,27 @@ using UnityEngine;
 
 public class Footprint : MonoBehaviour
 {
-    public float lifetime = 2f;
-    private Material mat;
-    private float timer = 0f;
+    public float lifetime = 2f;            // 脚印存活时间（秒）
+    private Renderer rend;                // 脚印渲染器
+    private MaterialPropertyBlock mpb;     // 材质属性块（避免创建实例材质）
+    private float timer = 0f;             // 计时器
 
     void Start()
     {
-        mat = GetComponentInChildren<Renderer>().material;
-        Color c = mat.GetColor("_BaseColor");
-        c.a = 1f;
-        mat.SetColor("_BaseColor", c);
+        rend = GetComponentInChildren<Renderer>();
+        mpb = new MaterialPropertyBlock();
+        rend.GetPropertyBlock(mpb);
+        mpb.SetColor("_BaseColor", new Color(1, 1, 1, 1));
+        rend.SetPropertyBlock(mpb);
     }
 
     void Update()
     {
         timer += Time.deltaTime;
         float alpha = 1f - (timer / lifetime);
-        Color c = mat.GetColor("_BaseColor");
-        c.a = alpha;
-        mat.SetColor("_BaseColor", c);
+        rend.GetPropertyBlock(mpb);
+        mpb.SetColor("_BaseColor", new Color(1, 1, 1, alpha));
+        rend.SetPropertyBlock(mpb);
 
         if (timer >= lifetime)
             Destroy(gameObject);

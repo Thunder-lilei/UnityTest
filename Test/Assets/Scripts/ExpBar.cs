@@ -3,11 +3,11 @@ using TMPro;
 
 public class ExpBar : MonoBehaviour
 {
-    public RectTransform fillRect;
-    public TextMeshProUGUI levelText;
-    public float maxExp = 100f;
-    private float currentExp;
-    public int level = 1;
+    public RectTransform fillRect;         // 经验条填充矩形
+    public TextMeshProUGUI levelText;      // 等级文本
+    public float maxExp = 100f;            // 当前等级所需经验
+    private float currentExp;              // 当前累计经验
+    public int level = 1;                  // 当前等级
 
     void Start()
     {
@@ -21,11 +21,17 @@ public class ExpBar : MonoBehaviour
         currentExp += amount;
         if (currentExp >= maxExp)
         {
-            currentExp -= maxExp;
-            level++;
-            maxExp += 20f;
+            while (currentExp >= maxExp)
+            {
+                currentExp -= maxExp;
+                level++;
+                maxExp += 20f;
+            }
             UpdateLevelText();
             AudioManager.Instance?.PlayLevelUp();
+            UpgradeSystem upgradeSystem = GetComponent<UpgradeSystem>();
+            if (upgradeSystem != null)
+                upgradeSystem.ShowUpgrades();
         }
         UpdateFill();
     }

@@ -4,10 +4,9 @@ using UnityEngine;
 
 public class Rotator : MonoBehaviour
 {
-
-    // Update is called once per frame
+    // 旋转速度 (15, 30, 45) 度/秒，使用 unscaledDeltaTime 确保暂停时仍旋转
     void Update()
     {
-        transform.Rotate (new Vector3 (15, 30, 45) * Time.deltaTime);
+        transform.Rotate (new Vector3 (15, 30, 45) * Time.unscaledDeltaTime);
     }
 }

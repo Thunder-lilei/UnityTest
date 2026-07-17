@@ -1,6 +1,6 @@
 # UnityTest
 
-基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、血量/经验系统、血瓶掉落、敌人持续生成、音效系统和脚印系统。
+基于 [Roll-a-Ball](https://learn.unity.com/project/roll-a-ball) 教程的 Unity 学习项目，在官方教程基础上扩展了 AI 生成角色、火球攻击、血量/经验系统、血瓶掉落、升级选择系统、敌人持续生成、音效系统和脚印系统。
 
 ## 环境要求
 
@@ -29,6 +29,8 @@ Test/
 │   │   ├── AudioManager.cs     # 音效管理器（单例）
 │   │   ├── HealthBar.cs        # 血量条 UI
 │   │   ├── ExpBar.cs           # 经验条 UI + 升级系统
+│   │   ├── UpgradeSystem.cs    # 升级选择系统（暂停/三选一/应用效果）
+│   │   ├── UpgradeCard.cs      # 升级卡片 UI（悬浮高亮/点击回调）
 │   │   └── Rotator.cs          # 收集物旋转动画
 │   ├── Effects/                # VFX 特效（FireBall.vfx）
 │   └── TJGenerators/           # AI 生成资源缓存（含 SFX 音效）
@@ -58,9 +60,10 @@ Test/
 | 血量系统 | HealthBar：100 HP，敌人接触持续扣血，归零则失败 |
 | 血瓶掉落 | 敌人死亡 30% 概率掉落血瓶，拾取恢复 30 HP，血量满时不可拾取 |
 | 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
+| 升级选择系统 | 升级时暂停游戏，三选一：增加最大血量/移动速度/火球数量，含悬浮高亮和图标 |
 | 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
-| 音效系统 | AudioManager 单例：9 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/游戏结束） |
+| 音效系统 | AudioManager 单例：10 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/游戏结束） |
 | 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失 |
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
@@ -82,6 +85,26 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ## 更新日志
+
+### v0.6 (2026-07-17)
+
+- 新增升级选择系统：升级时暂停游戏，三张卡片三选一（增加最大血量/移动速度/火球数量）
+- 新增 UpgradeSystem.cs：暂停/恢复、随机打乱选项、应用升级效果
+- 新增 UpgradeCard.cs：悬浮高亮（变色+放大）、点击回调
+- 新增升级选择确认音效（AI 生成 SFX，共 10 种音效）
+- 新增 3 个升级图标 Sprite（AI 生成，透明背景，扁平风格：心形/闪电/火焰）
+- PlayerController：新增 fireballCount 字段，火球改为多发扇形发射（-15°~+15°）
+- HealthBar：新增 IncreaseMaxHealth() 方法
+- ExpBar：升级时调用 UpgradeSystem.ShowUpgrades()，while 循环支持跨多级升级
+- FireBall：忽略火球间互相碰撞，忽略 PickUp/HealthPotion 碰撞
+- Rotator：改用 Time.unscaledDeltaTime，暂停时继续旋转
+- Footprint：改用 MaterialPropertyBlock，消除材质内存泄漏
+- CameraController：Start() 加 null 检查
+- EnemySpawner：浮点比较改为 Mathf.Abs < 0.001f
+- 全部 10 个脚本补充类属性注释
+- 导入 KayKit 和 Kenney 模型资产包
+- Ground 材质从 wall.mat 改为 Background.mat
+- 清理 7 个冗余资产
 
 ### v0.5 (2026-07-16)
 

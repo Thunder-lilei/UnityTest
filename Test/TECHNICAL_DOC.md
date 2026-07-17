@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-16)
+> **文档日期**: 2026-07-10 (更新: 2026-07-17)
 
 ---
 
@@ -63,7 +63,7 @@
 
 ## 2. 脚本架构
 
-项目共包含 **10 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
+项目共包含 **12 个 C# 脚本**，均位于 `Assets/Scripts/` 目录下，无自定义命名空间。
 
 ```
 Assets/Scripts/
@@ -72,11 +72,13 @@ Assets/Scripts/
 ├── EnemyMovement.cs       — 敌人 AI 寻路 + 死亡掉落经验方块和血瓶
 ├── EnemySpawner.cs        — 敌人持续生成（屏幕外刷新，NavMesh 采样）
 ├── FireBall.cs            — 火球飞行与碰撞
-├── Footprint.cs           — 脚印渐隐消失
-├── AudioManager.cs        — 音效管理器（单例，9 种音效）
-├── HealthBar.cs           — 血量条 UI（100 HP，扣血/回血，死亡判定）
-├── ExpBar.cs              — 经验条 UI + 升级系统（100 EXP 升级，每级 +20）
-└── Rotator.cs             — 收集品/血瓶旋转动画
+├── Footprint.cs           — 脚印渐隐消失（MaterialPropertyBlock）
+├── AudioManager.cs        — 音效管理器（单例，10 种音效）
+├── HealthBar.cs           — 血量条 UI（100 HP，扣血/回血/增加上限，死亡判定）
+├── ExpBar.cs              — 经验条 UI + 升级系统（while 循环跨多级升级）
+├── UpgradeSystem.cs       — 升级选择系统（暂停/三选一/应用效果）
+├── UpgradeCard.cs         — 升级卡片 UI（悬浮高亮/点击回调）
+└── Rotator.cs             — 收集品/血瓶旋转动画（unscaledDeltaTime）
 ```
 
 ### 2.1 CameraController.cs
@@ -310,13 +312,53 @@ Update → 鼠标左键 → FireFireball() → 生成火球 (VFX + 碰撞) + 音
 
 ### 2.10 Rotator.cs
 
-**职责**: 装饰性旋转动画，应用于收集品。
+**职责**: 装饰性旋转动画，应用于收集品和血瓶。
 
 | 方法 | 生命周期 | 逻辑 |
 |---|---|---|
-| `Update()` | 每帧 | `transform.Rotate(new Vector3(15, 30, 45) * Time.deltaTime)` |
+| `Update()` | 每帧 | `transform.Rotate(new Vector3(15, 30, 45) * Time.unscaledDeltaTime)` |
 
-**设计要点**: 旋转速度为 `(15, 30, 45)` 度/秒，三轴非均匀旋转产生视觉趣味。乘以 `Time.deltaTime` 确保帧率无关。
+**设计要点**: 旋转速度为 `(15, 30, 45)` 度/秒，三轴非均匀旋转产生视觉趣味。使用 `Time.unscaledDeltaTime` 确保升级暂停时仍继续旋转。
+
+### 2.11 UpgradeSystem.cs
+
+**职责**: 升级选择系统核心逻辑：暂停游戏、随机选项、应用升级效果。
+
+**依赖**: `UnityEngine`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `upgradePanel` | `GameObject` | public | 升级面板 UI |
+| `cards` | `UpgradeCard[]` | public | 三张卡片引用 |
+| `icons` | `Sprite[]` | public | 三种升级图标（按 UpgradeType 顺序） |
+
+| 方法 | 逻辑 |
+|---|---|
+| `ShowUpgrades()` | 随机打乱三种 UpgradeType → 填充卡片内容/图标/回调 → `Time.timeScale = 0` → 显示面板 |
+| `SelectUpgrade(type)` | 根据 type 应用效果（MaxHealth+20/Speed+2/FireballCount+1）→ 播放确认音效 → `Time.timeScale = 1` → 隐藏面板 |
+
+### 2.12 UpgradeCard.cs
+
+**职责**: 单张升级卡片 UI，处理悬浮高亮和点击回调。
+
+**依赖**: `UnityEngine`, `UnityEngine.UI`, `TMPro`, `UnityEngine.EventSystems`
+
+| 字段 | 类型 | 可见性 | 说明 |
+|---|---|---|---|
+| `titleText` | `TextMeshProUGUI` | public | 卡片标题文本 |
+| `descText` | `TextMeshProUGUI` | public | 卡片描述文本 |
+| `icon` | `Image` | public | 卡片图标 |
+| `button` | `Button` | public | 卡片按钮 |
+| `normalColor` | `Color` | public | 默认背景色 |
+| `hoverColor` | `Color` | public | 悬浮背景色 |
+
+| 方法 | 逻辑 |
+|---|---|
+| `Start()` | 获取 `Image` 组件，设置默认背景色 |
+| `SetData(type, title, desc)` | 设置升级类型、标题、描述 |
+| `SetupCallback(system)` | 补获取 bgImage → 注册 button.onClick → 调用 `system.SelectUpgrade` |
+| `OnPointerEnter()` | 变色为 hoverColor + 放大 1.05 倍 |
+| `OnPointerExit()` | 恢复 normalColor + 恢复 1.0 倍 |
 
 ---
 
@@ -556,18 +598,19 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 10 个脚本，约 450 行代码，结构清晰 |
+| 代码规模 | 12 个脚本，约 600 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
 | 战斗系统 | 鼠标左键发射火球，VFX Graph 视觉 + SphereCollider 碰撞检测 |
 | 血量系统 | HealthBar：100 HP，OnCollisionStay 持续扣血，归零判定失败 |
-| 经验系统 | ExpBar：收集 +10 EXP，满 100 升级，每级 maxExp +20 |
+| 经验系统 | ExpBar：收集 +10 EXP，满 100 升级，每级 maxExp +20，while 循环支持跨多级 |
+| 升级选择系统 | UpgradeSystem：暂停游戏，三选一（MaxHealth/Speed/FireballCount），悬浮高亮卡片 |
 | 敌人生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
 | UI 系统 | uGUI Canvas + TextMeshPro + 血量条 + 经验条 + 游戏结束面板 |
 | 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
-| 音频系统 | AudioManager 单例，9 种 AI 生成 SFX 音效 |
+| 音频系统 | AudioManager 单例，10 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
 | 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效 |
 | 持久化 | 无 (无存档系统) |

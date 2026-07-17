@@ -6,19 +6,20 @@ using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    private Rigidbody rb;
-    private Animator animator;
-    public float speed = 10f;
-    public GameObject gameOverPanel;
-    public TextMeshProUGUI resultText;
-    public GameObject footprintPrefab;   // 脚印 Prefab
-    public float footprintSpacing = 1f;  // 每隔多远留一个脚印
-    private Vector3 lastFootprintPos;     // 上一个脚印位置
-    private bool isLeftFoot = true;
-    public GameObject foot;
-    public GameObject skill;
-    public GameObject fireballPrefab;
-    public Camera mainCamera;
+    private Rigidbody rb;                  // 玩家刚体组件
+    private Animator animator;             // 玩家动画控制器
+    public float speed = 10f;              // 移动速度
+    public GameObject gameOverPanel;       // 游戏结束面板
+    public TextMeshProUGUI resultText;     // 结束结果文本
+    public GameObject footprintPrefab;     // 脚印 Prefab
+    public float footprintSpacing = 1f;    // 脚印生成间距
+    private Vector3 lastFootprintPos;      // 上一个脚印位置
+    private bool isLeftFoot = true;        // 左右脚交替标记
+    public GameObject foot;                // 脚印父物体
+    public GameObject skill;               // 技能特效父物体
+    public GameObject fireballPrefab;      // 火球 Prefab
+    public Camera mainCamera;              // 主摄像机
+    public int fireballCount = 1;          // 火球发射数量
 
     void Start()
     {
@@ -34,7 +35,7 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         // 左键按下
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && Time.timeScale > 0)
         {
             FireFireball();
         }
@@ -81,10 +82,9 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter(Collider other) 
+    void OnTriggerEnter(Collider other)
     {
-        // 捡经验
-        if (other.gameObject.CompareTag("PickUp")) 
+        if (other.gameObject.CompareTag("PickUp"))
         {
             Destroy(other.gameObject);
             ExpBar expBar = GetComponent<ExpBar>();
@@ -102,7 +102,6 @@ public class PlayerController : MonoBehaviour
                 AudioManager.Instance?.PlayHealthPotionPickup();
             }
         }
-        
     }
 
     private void OnCollisionStay(Collision collision)
@@ -117,8 +116,8 @@ public class PlayerController : MonoBehaviour
                 if (healthBar.IsDead())
                 {
                     AudioManager.Instance?.PlayPlayerDeath();
-                    Destroy(gameObject);
                     ShowGameOver();
+                    Destroy(gameObject);
                 }
             }
         }
@@ -143,17 +142,27 @@ public class PlayerController : MonoBehaviour
 
     void FireFireball()
     {
-        if (fireballPrefab == null || skill == null)
+        if (fireballPrefab == null || skill == null || mainCamera == null)
             return;
 
-        // 朝角色面朝方向发射
-        Vector3 direction = transform.forward;
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        if (!Physics.Raycast(ray, out RaycastHit hit, 100f))
+            return;
+
+        Vector3 direction = hit.point - transform.position;
         direction.y = 0;
         direction.Normalize();
 
-        // 在角色前方生成火弹
-        Vector3 spawnPos = transform.position + Vector3.up + transform.forward;
-        Instantiate(fireballPrefab, spawnPos, Quaternion.LookRotation(direction), skill.transform);
+        for (int i = 0; i < fireballCount; i++)
+        {
+            float angle = 0f;
+            if (fireballCount > 1)
+                angle = Mathf.Lerp(-15f, 15f, i / (float)(fireballCount - 1));
+
+            Vector3 dir = Quaternion.Euler(0, angle, 0) * direction;
+            Vector3 spawnPos = transform.position + Vector3.up + dir;
+            Instantiate(fireballPrefab, spawnPos, Quaternion.LookRotation(dir), skill.transform);
+        }
         AudioManager.Instance?.PlayFireballLaunch();
     }
 }

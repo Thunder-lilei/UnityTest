@@ -5,13 +5,13 @@ using UnityEngine.AI;
 
 public class EnemyMovement : MonoBehaviour
 {
-    public Transform player;
-    public GameObject pickUpPrefab;
-    public GameObject healthPotionPrefab;
-    public float dropChance = 0.3f;
+    public Transform player;               // 追踪目标（玩家）
+    public GameObject pickUpPrefab;        // 死亡掉落的经验方块 Prefab
+    public GameObject healthPotionPrefab;  // 死亡掉落的血瓶 Prefab
+    public float dropChance = 0.3f;        // 血瓶掉落概率
 
-    private NavMeshAgent navMeshAgent;
-    private bool isQuitting;
+    private NavMeshAgent navMeshAgent;     // NavMesh 代理
+    private bool isQuitting;               // 是否正在退出应用
 
     void Start()
     {

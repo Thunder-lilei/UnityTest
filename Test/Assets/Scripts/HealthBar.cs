@@ -3,9 +3,9 @@ using UnityEngine.UI;
 
 public class HealthBar : MonoBehaviour
 {
-    public RectTransform fillRect;
-    public float maxHealth = 100f;
-    private float currentHealth;
+    public RectTransform fillRect;         // 血量条填充矩形
+    public float maxHealth = 100f;         // 最大血量
+    private float currentHealth;           // 当前血量
 
     void Start()
     {
@@ -32,6 +32,13 @@ public class HealthBar : MonoBehaviour
     public void Heal(float amount)
     {
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        UpdateFill();
+    }
+
+    public void IncreaseMaxHealth(float amount)
+    {
+        maxHealth += amount;
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
         UpdateFill();
     }
 

@@ -5,16 +5,16 @@ using UnityEngine.AI;
 
 public class EnemySpawner : MonoBehaviour
 {
-    public GameObject enemyPrefab;
-    public Transform player;
-    public int maxCount = 30;
-    public float spawnInterval = 0.5f;
-    public float spawnMargin = 2f;
-    public GameObject enemyGo;
+    public GameObject enemyPrefab;         // 敌人 Prefab
+    public Transform player;               // 玩家 Transform（传递给生成的敌人）
+    public int maxCount = 30;              // 最大敌人数
+    public float spawnInterval = 0.5f;     // 生成间隔（秒）
+    public float spawnMargin = 2f;         // 屏幕外边距
+    public GameObject enemyGo;             // 敌人父物体
 
-    private Camera mainCamera;
-    private float timer;
-    private List<GameObject> enemies = new List<GameObject>();
+    private Camera mainCamera;             // 主摄像机
+    private float timer;                   // 生成计时器
+    private List<GameObject> enemies = new List<GameObject>();  // 已生成敌人列表
 
     void Start()
     {
@@ -67,7 +67,7 @@ public class EnemySpawner : MonoBehaviour
         for (int i = 0; i < 4; i++)
         {
             Ray ray = mainCamera.ViewportPointToRay(viewportCorners[i]);
-            if (ray.direction.y == 0)
+            if (Mathf.Abs(ray.direction.y) < 0.001f)
                 return Vector3.zero;
             float t = -ray.origin.y / ray.direction.y;
             worldCorners[i] = ray.origin + ray.direction * t;
