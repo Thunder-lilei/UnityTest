@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
@@ -25,6 +26,13 @@ public class PlayerController : MonoBehaviour
     private bool isPaused = false;         // 是否暂停（升级选择时）
     private ObjectPool fireballPool;       // 火球对象池
     private ObjectPool footprintPool;      // 脚印对象池
+    public float dashSpeed = 30f;          // 闪避速度
+    public float dashDuration = 0.2f;      // 闪避持续时间
+    public float dashCooldown = 2f;       // 冷却时间
+    private bool isDashing = false;        // 是否正在闪避
+    private float dashTimer = 0f;         // 闪避计时器
+    private float cooldownTimer = 0f;      // 冷却计时器
+    public Image dashIcon;                 // 冷却图标引用
 
     void Start()
     {
@@ -58,10 +66,34 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 左键按下
         if (Input.GetMouseButtonDown(0) && !isPaused)
         {
             FireFireball();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) && !isPaused && !isDashing && cooldownTimer <= 0)
+        {
+            Dash();
+        }
+
+        // 冷却计时 + UI 更新
+        if (cooldownTimer > 0)
+        {
+            cooldownTimer -= Time.deltaTime;
+            if (dashIcon != null)
+            {
+                // 蓝色覆盖层从 0→1 恢复
+                dashIcon.fillAmount = 1f - (cooldownTimer / dashCooldown);
+                dashIcon.color = new Color(0.3f, 0.6f, 1f, 1f);
+            }
+        }
+        else
+        {
+            if (dashIcon != null)
+            {
+                dashIcon.fillAmount = 1f;
+                dashIcon.color = new Color(0.3f, 0.6f, 1f, 1f);
+            }
         }
     }
 
@@ -72,12 +104,13 @@ public class PlayerController : MonoBehaviour
 
         Vector3 movement = new Vector3(movementX, 0.0f, movementY);
 
-        // 不用AddForce 恒定速度
-        // 不改变Y轴 避免穿模
-        Vector3 vel = rb.velocity;
-        vel.x = movementX * speed;
-        vel.z = movementY * speed;
-        rb.velocity = vel;
+        if (!isDashing)
+        {
+            Vector3 vel = rb.velocity;
+            vel.x = movementX * speed;
+            vel.z = movementY * speed;
+            rb.velocity = vel;
+        }
         animator.SetFloat("Speed", rb.velocity.magnitude);
 
         // 朝向移动方向
@@ -104,6 +137,17 @@ public class PlayerController : MonoBehaviour
                 isLeftFoot = !isLeftFoot;
             }
         }
+
+        // 闪避计时
+        if (isDashing)
+        {
+            dashTimer -= Time.fixedDeltaTime;
+            if (dashTimer <= 0)
+            {
+                isDashing = false;
+                cooldownTimer = dashCooldown;
+            }
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -128,6 +172,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
+        if (isDashing)
+            return;
+
         if (collision.gameObject.CompareTag("Enemy"))
         {
             if (healthBar != null)
@@ -190,6 +237,24 @@ public class PlayerController : MonoBehaviour
             fireballPool.Spawn(spawnPos, Quaternion.LookRotation(dir));
         }
         AudioManager.Instance?.PlayFireballLaunch();
+    }
+
+    void Dash()
+    {
+        isDashing = true;
+        dashTimer = dashDuration;
+
+        float mx = Input.GetAxis("Horizontal");
+        float my = Input.GetAxis("Vertical");
+        Vector3 dir = new Vector3(mx, 0, my);
+        if (dir.magnitude < 0.1f)
+            dir = transform.forward;
+
+        dir.y = 0;
+        dir.Normalize();
+
+        rb.velocity = dir * dashSpeed;
+        AudioManager.Instance?.PlayDash();
     }
 }
 

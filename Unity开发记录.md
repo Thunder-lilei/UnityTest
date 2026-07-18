@@ -363,6 +363,72 @@ importer.SaveAndReimport();
 
 **本项目优化**：Footprint.cs 已从 `.material` 改为 `MaterialPropertyBlock`。
 
+### 问题16：Image.Type.Filled 填充不显示问题
+
+**现象**：设置 `Image.Type = Filled`，`FillMethod = Radial360`，代码中正确更新 `fillAmount`，但 UI 始终显示为一个固定方块，没有任何填充变化。
+
+**原因**：**`Image.Type.Filled` 必须有 Sprite 才能工作。** 纯色 Image（无 Sprite）在 Filled 模式下不会按 fillAmount 裁剪显示区域，而是始终显示为完整方块。Unity 的 Filled 填充是通过 Sprite 的 UV 坐标来裁剪渲染区域的，没有 Sprite 就没有 UV 可以裁剪。
+
+**解决方案**：给 Image 分配一个 Sprite（白色圆形），Filled 模式即可正常工作：
+
+```csharp
+// 必须有 Sprite
+dashImg.sprite = circleSprite;
+dashImg.type = Image.Type.Filled;
+dashImg.fillMethod = Image.FillMethod.Radial360;
+dashImg.fillAmount = 0.5f;  // 现在能正确显示半圆
+```
+
+**Image.Type 各模式对 Sprite 的要求**：
+
+| Type | 需要 Sprite | 说明 |
+|---|---|---|
+| Simple | 可选 | 无 Sprite 时显示纯色方块 |
+| Sliced | **必须** | 九宫格拉伸 |
+| Tiled | **必须** | 平铺 |
+| Filled | **必须** | 按比例填充裁剪 |
+
+> **经验**：使用 Image 的 Filled/Sliced/Tiled 模式时，必须分配 Sprite。纯色 Image 只适用于 Simple 模式。如果需要纯色填充效果（如冷却图标），创建一个白色形状 Sprite（圆形/方形），然后设置颜色即可。
+
+### 问题17：Canvas 渲染模式：Screen Space vs World Space
+
+**三种渲染模式**：
+
+| 模式 | 渲染位置 | 坐标系 | 是否跟随3D对象 | 适用场景 |
+|---|---|---|---|---|
+| **Screen Space Overlay** | 屏幕最上层（无 Camera 参与） | 屏幕像素坐标 | ❌ 固定在屏幕位置 | 玩家 HUD、血条、计分 |
+| **Screen Space Camera** | 屏幕上（指定 Camera 渲染） | 屏幕坐标 | ❌ 固定在屏幕位置 | 需要 Camera 后处理影响的 UI |
+| **World Space** | 3D 世界中 | 世界坐标 | ✅ 作为场景物体跟随移动 | 敌人头顶血条、世界空间文字 |
+
+**本项目中的使用**：
+
+| 血条 | Canvas 模式 | 行为 |
+|---|---|---|
+| 主角血条/经验条/升级面板 | **Screen Space Overlay** | 固定在屏幕左上角/中心，不随玩家移动 |
+| 僵尸头顶血条 | **World Space** | 挂在僵尸子对象上，跟随僵尸移动，被障碍物遮挡，随距离缩放 |
+
+**选择原则**：
+- **玩家自身 UI** → Screen Space Overlay（始终可见，不随角色移动）
+- **场景中实体的 UI** → World Space（跟随个体，有空间感）
+
+### 问题18：脚印白色方块问题修复
+
+**现象**：脚印显示为白色方块，而非脚印形状。
+
+**修复内容**：
+
+1. **贴图** — 生成了脚印形状的程序化贴图（椭圆+脚跟，棕色，透明背景），替换原来的纯白无贴图材质
+2. **材质** — URP/Unlit Shader，`_Surface=1`（透明），`_Blend=0`（Alpha混合），启用 `_SURFACE_TRANSPARENCY` 关键词，`_BaseColor` 设为白色（不染色，贴图自带颜色）
+3. **脚本** — `Footprint.cs` 用 `mat.color` 设置白色 + 只改 alpha 渐隐，`OnDisable` 中重置颜色
+4. **Quad Prefab** — 缩放从 0.15 调到 0.3
+
+**验证结果**：
+
+- ✅ 编辑模式下 AssetPreview 确认：脚印形状、棕色、透明背景
+- ✅ 材质配置正确：URP/Unlit 透明模式，关键词已启用
+- ✅ 对象池正常：20 个 Quad 实例预创建
+- ✅ 脚本逻辑正确：白色不染色，alpha 渐隐归零后回收
+
 ---
 
 ## 知识点积累

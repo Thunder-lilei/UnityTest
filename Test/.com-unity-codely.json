@@ -1,10 +1,10 @@
 {
-  "unity_port": 62295,
-  "stream_port": 62302,
+  "unity_port": 57014,
+  "stream_port": 50852,
   "created_date": "2026-07-09T13:31:05.8479972Z",
   "project_path": "C:/AIProject/UnityTest/Test/Assets",
   "reloading": false,
   "reason": "ready",
-  "seq": 14819,
-  "last_heartbeat": "2026-07-17T13:11:25.435Z"
+  "seq": 34362,
+  "last_heartbeat": "2026-07-18T11:45:06.146Z"
 }

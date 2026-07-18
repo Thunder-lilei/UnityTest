@@ -5,12 +5,12 @@ using UnityEngine.AI;
 
 public class EnemySpawner : MonoBehaviour
 {
-    public GameObject enemyPrefab;         // 敌人 Prefab
-    public Transform player;               // 玩家 Transform（传递给生成的敌人）
-    public int maxCount = 30;              // 最大敌人数
-    public float spawnInterval = 0.5f;     // 生成间隔（秒）
-    public float spawnMargin = 2f;         // 屏幕外边距
-    public GameObject enemyGo;             // 敌人父物体
+    public GameObject[] enemyPrefabs;       // 敌人 Prefab 数组（普通/快速/坦克）
+    public Transform player;                // 玩家 Transform（传递给生成的敌人）
+    public int maxCount = 30;               // 最大敌人数
+    public float spawnInterval = 0.5f;      // 生成间隔（秒）
+    public float spawnMargin = 2f;          // 屏幕外边距
+    public GameObject enemyGo;              // 敌人父物体
 
     private Camera mainCamera;             // 主摄像机
     private float timer;                   // 生成计时器
@@ -52,14 +52,25 @@ public class EnemySpawner : MonoBehaviour
         if (spawnPos == Vector3.zero)
             return;
 
-        GameObject enemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity, enemyGo.transform);
+        int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
+
+        // 随机选敌人类型，早期只有普通，10秒后加入快速，20秒后加入坦克
+        int typeCount = Mathf.Min(3, 1 + Mathf.FloorToInt(gameTimer / 10f));
+        int typeIndex = Random.Range(0, typeCount);
+
+        if (typeIndex >= enemyPrefabs.Length)
+            typeIndex = 0;
+
+        GameObject prefab = enemyPrefabs[typeIndex];
+        GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity, enemyGo.transform);
 
         EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
         if (movement != null)
         {
             movement.player = player;
-            int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
-            movement.maxHealth = Mathf.Min(10f, 2f + difficultyLevel);
+            // 难度递增：在基础血量上叠加
+            float healthBonus = difficultyLevel;
+            movement.maxHealth = movement.maxHealth + healthBonus;
         }
 
         enemies.Add(enemy);

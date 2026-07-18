@@ -14,6 +14,7 @@ public class AudioManager : MonoBehaviour
     public AudioSource gameOver;           // 游戏结束音效
     public AudioSource healthPotionPickup; // 拾取血瓶音效
     public AudioSource upgradeConfirm;     // 升级选择确认音效
+    public AudioSource dash;              // 闪避音效
 
     void Awake()
     {
@@ -33,4 +34,5 @@ public class AudioManager : MonoBehaviour
     public void PlayGameOver() { if (gameOver != null) gameOver.Play(); }
     public void PlayHealthPotionPickup() { if (healthPotionPickup != null) healthPotionPickup.Play(); }
     public void PlayUpgradeConfirm() { if (upgradeConfirm != null) upgradeConfirm.Play(); }
+    public void PlayDash() { if (dash != null) dash.Play(); }
 }
