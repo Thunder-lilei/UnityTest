@@ -213,8 +213,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.4581794, y: 1.0288227, z: 1.7590579}
-  m_Center: {x: -0.16962558, y: 0.18386516, z: 0.026420116}
+  m_Size: {x: 0.6, y: 1, z: 0.6}
+  m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!195 &1482984701016407682
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -224,7 +224,7 @@ NavMeshAgent:
   m_GameObject: {fileID: 8312372521104239757}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.5
+  m_Radius: 0.3
   m_Speed: 1.5
   m_Acceleration: 8
   avoidancePriority: 50
@@ -255,6 +255,7 @@ MonoBehaviour:
   dropChance: 0.3
   maxHealth: 6
   healthBarPrefab: {fileID: 2240652183249777624, guid: f51a53a809f39a14589b46d2250a5860, type: 3}
+  isBoss: 0
 --- !u!4 &8651602252052739639 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 47ca11cfb9ef8af4eaacc6063cffd803, type: 3}

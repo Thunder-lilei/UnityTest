@@ -2,31 +2,40 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using TMPro;
 
 public class EnemySpawner : MonoBehaviour
 {
     public GameObject[] enemyPrefabs;       // 敌人 Prefab 数组（普通/快速/坦克）
+    public GameObject bossPrefab;           // Boss Prefab
     public Transform player;                // 玩家 Transform（传递给生成的敌人）
     public int maxCount = 30;               // 最大敌人数
     public float spawnInterval = 0.5f;      // 生成间隔（秒）
     public float spawnMargin = 2f;          // 屏幕外边距
     public GameObject enemyGo;              // 敌人父物体
+    public TextMeshProUGUI timerText;       // 计时器 UI
 
     private Camera mainCamera;             // 主摄像机
     private float timer;                   // 生成计时器
     private List<GameObject> enemies = new List<GameObject>();  // 已生成敌人列表
     private float gameTimer;               // 游戏计时器
+    private float bossTimer;               // Boss 计时器
+    public float bossInterval = 10f;       // Boss 生成间隔
 
     void Start()
     {
         mainCamera = Camera.main;
         timer = 0f;
         gameTimer = 0f;
+        bossTimer = 0f;
     }
 
     void Update()
     {
         gameTimer += Time.deltaTime;
+
+        if (timerText != null)
+            timerText.text = FormatTime(gameTimer);
 
         int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
         spawnInterval = Mathf.Max(0.15f, 0.5f - difficultyLevel * 0.02f);
@@ -39,6 +48,39 @@ public class EnemySpawner : MonoBehaviour
             timer = 0f;
             SpawnEnemy();
         }
+
+        bossTimer += Time.deltaTime;
+        if (bossTimer >= bossInterval)
+        {
+            bossTimer = 0f;
+            SpawnBoss();
+        }
+    }
+
+    string FormatTime(float time)
+    {
+        int minutes = Mathf.FloorToInt(time / 60f);
+        int seconds = Mathf.FloorToInt(time % 60f);
+        return string.Format("{0:00}:{1:00}", minutes, seconds);
+    }
+
+    void SpawnBoss()
+    {
+        Vector3 spawnPos = GetSpawnPositionOutsideViewport();
+        if (spawnPos == Vector3.zero)
+            return;
+
+        GameObject boss = Instantiate(bossPrefab, spawnPos, Quaternion.identity, enemyGo.transform);
+
+        EnemyMovement movement = boss.GetComponent<EnemyMovement>();
+        if (movement != null)
+        {
+            movement.player = player;
+            int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
+            movement.maxHealth = 20f + difficultyLevel * 2f;
+        }
+
+        enemies.Add(boss);
     }
 
     void SpawnEnemy()

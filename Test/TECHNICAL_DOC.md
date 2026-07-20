@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-17, v0.7)
+> **文档日期**: 2026-07-10 (更新: 2026-07-18, v1.0)
 
 ---
 
@@ -601,7 +601,7 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 15 个脚本，约 850 行代码，结构清晰 |
+| 代码规模 | 15 个脚本，约 900 行代码，结构清晰 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
@@ -614,7 +614,7 @@ Builds/
 | AI 系统 | NavMeshAgent 寻路 + NavMeshObstacle 动态避障 |
 | UI 系统 | uGUI Canvas + TextMeshPro + 血量条 + 经验条 + 游戏结束面板 |
 | 输入系统 | 旧版 Input Manager (GetAxis + GetMouseButtonDown) |
-| 音频系统 | AudioManager 单例，10 种 AI 生成 SFX 音效 |
+| 音频系统 | AudioManager 单例，11 种 AI 生成 SFX 音效 |
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
 | 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效；ObjectPool 对象池复用 |
 | 难度递增 | 每10秒：生成间隔-0.02s（最低0.15s）、上限+2（最高60）、血量+1（最高10） |

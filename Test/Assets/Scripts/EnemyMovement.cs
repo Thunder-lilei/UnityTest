@@ -12,6 +12,7 @@ public class EnemyMovement : MonoBehaviour
     public float dropChance = 0.3f;        // 血瓶掉落概率
     public float maxHealth = 2f;           // 最大血量（由 Spawner 设置）
     public GameObject healthBarPrefab;      // 敌人头顶血条 Prefab
+    public bool isBoss = false;            // 是否为 Boss
 
     private NavMeshAgent navMeshAgent;     // NavMesh 代理
     private bool isQuitting;               // 是否正在退出应用
@@ -68,8 +69,16 @@ public class EnemyMovement : MonoBehaviour
 
         Transform parent = GameObject.Find("PickUp")?.transform;
 
-        if (pickUpPrefab != null)
-            Instantiate(pickUpPrefab, transform.position + Vector3.left * 0.5f + Vector3.up * 0.5f, Quaternion.identity, parent);
+        int expCount = isBoss ? 3 : 1;
+        for (int i = 0; i < expCount; i++)
+        {
+            if (pickUpPrefab != null)
+            {
+                Vector3 offset = Random.insideUnitSphere * 0.5f;
+                offset.y = 0.5f;
+                Instantiate(pickUpPrefab, transform.position + offset, Quaternion.identity, parent);
+            }
+        }
 
         if (healthPotionPrefab != null && Random.value <= dropChance)
             Instantiate(healthPotionPrefab, transform.position + Vector3.right * 0.5f + Vector3.up * 0.5f, Quaternion.identity, parent);
