@@ -34,6 +34,7 @@ public class PlayerController : MonoBehaviour
     private float cooldownTimer = 0f;      // 冷却计时器
     public Image dashIcon;                 // 冷却图标引用
 
+    /// <summary>初始化组件引用、对象池、主相机</summary>
     void Start()
     {
         Time.timeScale = 1;
@@ -43,16 +44,19 @@ public class PlayerController : MonoBehaviour
         healthBar = GetComponent<HealthBar>();
         expBar = GetComponent<ExpBar>();
         lastFootprintPos = transform.position;
-        // 获取场景主相机
         mainCamera = Camera.main;
 
-        // 初始化对象池
         fireballPool = CreatePool(fireballPrefab, skill.transform, 5);
         fireballPrefab.GetComponent<Fireball>()?.SetPool(fireballPool);
         footprintPool = CreatePool(footprintPrefab, foot.transform, 20);
         footprintPrefab.GetComponent<Footprint>()?.SetPool(footprintPool);
     }
 
+    /// <summary>创建对象池并挂载到指定父物体下</summary>
+    /// <param name="prefab">池中对象 Prefab</param>
+    /// <param name="parent">对象池父物体</param>
+    /// <param name="size">初始预创建数量</param>
+    /// <returns>创建的 ObjectPool 组件</returns>
     ObjectPool CreatePool(GameObject prefab, Transform parent, int size)
     {
         var poolGo = new GameObject(prefab.name + "_Pool");
@@ -64,6 +68,7 @@ public class PlayerController : MonoBehaviour
         return pool;
     }
 
+    /// <summary>每帧检测输入：左键发射火球、空格闪避、冷却 UI 更新</summary>
     void Update()
     {
         if (Input.GetMouseButtonDown(0) && !isPaused)
@@ -97,6 +102,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>物理帧：恒定速度移动、朝向旋转、脚印生成、闪避计时</summary>
     void FixedUpdate()
     {
         float movementX = Input.GetAxis("Horizontal");
@@ -150,6 +156,8 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>触发器回调：拾取经验方块和血瓶</summary>
+    /// <param name="other">碰撞到的对象</param>
     void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("PickUp"))
@@ -170,6 +178,8 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>持续碰撞回调：敌人接触扣血，闪避期间无敌</summary>
+    /// <param name="collision">碰撞信息</param>
     private void OnCollisionStay(Collision collision)
     {
         if (isDashing)
@@ -191,11 +201,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>设置暂停状态（升级选择时调用）</summary>
+    /// <param name="paused">是否暂停</param>
     public void SetPaused(bool paused)
     {
         isPaused = paused;
     }
 
+    /// <summary>显示游戏结束面板并暂停游戏</summary>
     void ShowGameOver()
     {
         gameOverPanel.SetActive(true);
@@ -203,16 +216,19 @@ public class PlayerController : MonoBehaviour
         Time.timeScale = 0;
     }
 
+    /// <summary>重新加载当前场景</summary>
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>退出游戏</summary>
     public void QuitGame()
     {
         Application.Quit();
     }
 
+    /// <summary>朝鼠标指向方向发射火球，多发时扇形分布</summary>
     void FireFireball()
     {
         if (fireballPrefab == null || skill == null || mainCamera == null)
@@ -239,6 +255,7 @@ public class PlayerController : MonoBehaviour
         AudioManager.Instance?.PlayFireballLaunch();
     }
 
+    /// <summary>闪避冲刺：朝移动方向高速位移，持续 dashDuration 秒</summary>
     void Dash()
     {
         isDashing = true;

@@ -15,6 +15,7 @@ public class UpgradeCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     private UpgradeSystem.UpgradeType upgradeType;  // 当前卡片对应的升级类型
     private Image bgImage;               // 卡片背景 Image
 
+    /// <summary>初始化背景色</summary>
     void Start()
     {
         bgImage = GetComponent<Image>();
@@ -22,6 +23,10 @@ public class UpgradeCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             bgImage.color = normalColor;
     }
 
+    /// <summary>设置卡片的升级类型、标题和描述</summary>
+    /// <param name="type">升级类型</param>
+    /// <param name="title">标题文本</param>
+    /// <param name="desc">描述文本</param>
     public void SetData(UpgradeSystem.UpgradeType type, string title, string desc)
     {
         upgradeType = type;
@@ -31,6 +36,8 @@ public class UpgradeCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             descText.text = desc;
     }
 
+    /// <summary>注册点击回调到指定 UpgradeSystem</summary>
+    /// <param name="system">UpgradeSystem 实例</param>
     public void SetupCallback(UpgradeSystem system)
     {
         if (bgImage == null)
@@ -46,6 +53,8 @@ public class UpgradeCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         }
     }
 
+    /// <summary>鼠标悬浮：变色 + 放大 1.05 倍</summary>
+    /// <param name="eventData">指针事件数据</param>
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (bgImage != null)
@@ -53,6 +62,8 @@ public class UpgradeCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         transform.localScale = Vector3.one * 1.05f;
     }
 
+    /// <summary>鼠标离开：恢复颜色和缩放</summary>
+    /// <param name="eventData">指针事件数据</param>
     public void OnPointerExit(PointerEventData eventData)
     {
         if (bgImage != null)

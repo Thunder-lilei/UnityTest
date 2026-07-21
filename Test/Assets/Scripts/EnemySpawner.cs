@@ -22,6 +22,7 @@ public class EnemySpawner : MonoBehaviour
     private float bossTimer;               // Boss 计时器
     public float bossInterval = 10f;       // Boss 生成间隔
 
+    /// <summary>初始化相机和计时器</summary>
     void Start()
     {
         mainCamera = Camera.main;
@@ -30,6 +31,7 @@ public class EnemySpawner : MonoBehaviour
         bossTimer = 0f;
     }
 
+    /// <summary>每帧更新计时器 UI、难度递增参数、普通敌人生成、Boss 生成</summary>
     void Update()
     {
         gameTimer += Time.deltaTime;
@@ -57,6 +59,9 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
+    /// <summary>格式化游戏时间为 mm:ss</summary>
+    /// <param name="time">秒数</param>
+    /// <returns>格式化时间字符串</returns>
     string FormatTime(float time)
     {
         int minutes = Mathf.FloorToInt(time / 60f);
@@ -64,6 +69,7 @@ public class EnemySpawner : MonoBehaviour
         return string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
+    /// <summary>生成 Boss：从屏幕外刷新，不受 maxCount 限制</summary>
     void SpawnBoss()
     {
         Vector3 spawnPos = GetSpawnPositionOutsideViewport();
@@ -83,6 +89,7 @@ public class EnemySpawner : MonoBehaviour
         enemies.Add(boss);
     }
 
+    /// <summary>生成普通敌人：随机类型、难度递增血量、受 maxCount 限制</summary>
     void SpawnEnemy()
     {
         enemies.RemoveAll(e => e == null);
@@ -118,6 +125,8 @@ public class EnemySpawner : MonoBehaviour
         enemies.Add(enemy);
     }
 
+    /// <summary>计算视口外边缘的 NavMesh 上的生成位置</summary>
+    /// <returns>生成位置，Vector3.zero 表示无效</returns>
     Vector3 GetSpawnPositionOutsideViewport()
     {
         Vector3[] viewportCorners = new Vector3[]
@@ -164,6 +173,7 @@ public class EnemySpawner : MonoBehaviour
         if (NavMesh.SamplePosition(spawnPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
             return hit.position;
 
-        return spawnPos;
+        // NavMesh 采样失败，返回零向量表示跳过本次生成
+        return Vector3.zero;
     }
 }

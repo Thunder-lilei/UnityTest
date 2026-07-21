@@ -10,6 +10,7 @@ public class Footprint : MonoBehaviour, IPooledObject
 
     private static readonly Color FootprintColor = Color.white;  // 白色不染色，贴图自带颜色
 
+    /// <summary>对象池激活回调：重置计时器、渲染器、材质颜色</summary>
     public void OnSpawn()
     {
         timer = 0f;
@@ -18,11 +19,14 @@ public class Footprint : MonoBehaviour, IPooledObject
         mat.color = FootprintColor;
     }
 
+    /// <summary>设置所属对象池引用</summary>
+    /// <param name="pool">对象池实例</param>
     public void SetPool(ObjectPool pool)
     {
         this.pool = pool;
     }
 
+    /// <summary>每帧递减 alpha，超时后回收</summary>
     void Update()
     {
         timer += Time.deltaTime;
@@ -33,6 +37,7 @@ public class Footprint : MonoBehaviour, IPooledObject
             pool.Despawn(gameObject);
     }
 
+    /// <summary>失活时重置材质颜色（对象池复用准备）</summary>
     void OnDisable()
     {
         if (mat != null)

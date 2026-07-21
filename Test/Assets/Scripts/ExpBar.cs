@@ -9,6 +9,7 @@ public class ExpBar : MonoBehaviour
     private float currentExp;              // 当前累计经验
     public int level = 1;                  // 当前等级
 
+    /// <summary>初始化经验值和 UI</summary>
     void Start()
     {
         currentExp = 0f;
@@ -16,6 +17,8 @@ public class ExpBar : MonoBehaviour
         UpdateLevelText();
     }
 
+    /// <summary>增加经验，满经验升级（while 循环支持跨多级），触发升级面板</summary>
+    /// <param name="amount">经验值</param>
     public void AddExp(float amount)
     {
         currentExp += amount;
@@ -36,6 +39,7 @@ public class ExpBar : MonoBehaviour
         UpdateFill();
     }
 
+    /// <summary>根据当前经验比例更新经验条 UI</summary>
     void UpdateFill()
     {
         if (fillRect != null)
@@ -45,6 +49,7 @@ public class ExpBar : MonoBehaviour
         }
     }
 
+    /// <summary>更新等级文本为 "Lv. N"</summary>
     void UpdateLevelText()
     {
         if (levelText != null)

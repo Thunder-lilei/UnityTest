@@ -5,7 +5,7 @@
 > **引擎版本**: Unity 2022.3.62t11 (Tuanjie / Unity 中国版 1.9.3)
 > **渲染管线**: Universal Render Pipeline (URP)
 > **目标平台**: Windows Standalone (x86_64)
-> **文档日期**: 2026-07-10 (更新: 2026-07-18, v1.0)
+> **文档日期**: 2026-07-10 (更新: 2026-07-20, v1.1)
 
 ---
 
@@ -601,7 +601,7 @@ Builds/
 
 | 维度 | 评估 |
 |---|---|
-| 代码规模 | 15 个脚本，约 900 行代码，结构清晰 |
+| 代码规模 | 15 个脚本，约 1000 行代码，全部函数含 XML 文档注释 |
 | 架构模式 | 经典 MonoBehaviour 组件模式 + AudioManager 单例 |
 | 渲染管线 | URP (从 Built-in 迁移)，VFX Graph 粒子特效 |
 | 物理系统 | Rigidbody + velocity 恒定速度移动（保留 Y 轴）；freezeRotation=true；CapsuleCollider 玩家 |
@@ -618,5 +618,7 @@ Builds/
 | 动画系统 | Animator Controller (Speed 驱动 Idle/Walk/Run 状态机) + AI 生成角色动画 |
 | 资源管理 | AI 生成模型/贴图/动画/SFX (Meshy AI + TJGenerators)；Quaternius 3D 模型；VFX Graph 特效；ObjectPool 对象池复用 |
 | 难度递增 | 每10秒：生成间隔-0.02s（最低0.15s）、上限+2（最高60）、血量+1（最高10） |
-| 敌人血量 | EnemyMovement：maxHealth/currentHealth/TakeDamage/Die()，头顶 World Space Canvas 血条 |
+| 敌人血量 | EnemyMovement：maxHealth/currentHealth/TakeDamage/Die()，头顶 World Space Canvas 血条，屏幕外隐藏血条，血条高度按缩放调整 |
+| Boss 系统 | EnemyBoss.prefab：2.5x/HP20/红色材质/isBoss，EnemySpawner 每10秒生成，不受 maxCount 限制 |
+| SkinnedMeshRenderer 修复 | updateWhenOffscreen=true + cullingMode=AlwaysAnimate + applyRootMotion=false，解决敌人不可见问题 |
 | 持久化 | 无 (无存档系统) |

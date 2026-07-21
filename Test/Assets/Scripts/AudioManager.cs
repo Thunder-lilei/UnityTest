@@ -16,6 +16,7 @@ public class AudioManager : MonoBehaviour
     public AudioSource upgradeConfirm;     // 升级选择确认音效
     public AudioSource dash;              // 闪避音效
 
+    /// <summary>单例初始化</summary>
     void Awake()
     {
         if (Instance == null)

@@ -9,6 +9,7 @@ public class ObjectPool : MonoBehaviour
 
     private Queue<GameObject> pool = new Queue<GameObject>();
 
+    /// <summary>预创建指定数量的对象放入池中</summary>
     void Start()
     {
         for (int i = 0; i < initialSize; i++)
@@ -19,6 +20,10 @@ public class ObjectPool : MonoBehaviour
         }
     }
 
+    /// <summary>从池中取出对象并激活，池空时自动创建新实例</summary>
+    /// <param name="position">生成位置</param>
+    /// <param name="rotation">生成旋转</param>
+    /// <returns>激活的 GameObject</returns>
     public GameObject Spawn(Vector3 position, Quaternion rotation)
     {
         GameObject obj;
@@ -42,6 +47,8 @@ public class ObjectPool : MonoBehaviour
         return obj;
     }
 
+    /// <summary>将对象失活并放回池中</summary>
+    /// <param name="obj">要回收的 GameObject</param>
     public void Despawn(GameObject obj)
     {
         obj.SetActive(false);
@@ -49,7 +56,9 @@ public class ObjectPool : MonoBehaviour
     }
 }
 
+/// <summary>对象池对象接口，Spawn 时调用 OnSpawn 初始化</summary>
 public interface IPooledObject
 {
+    /// <summary>从池中取出时调用，用于重置状态</summary>
     void OnSpawn();
 }

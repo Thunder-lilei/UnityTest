@@ -33,10 +33,10 @@ UnityTest/
 ```
 Test/
 ├── Assets/
-│   ├── Characters/             # 角色 Prefab（AI 生成）
-│   ├── Materials/              # 材质（PickUp/Wall/Background/Footprint/HealthPotion）
-│   ├── Prefabs/                # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar）
-│   ├── Quaternius/             # Quaternius 3D 模型资源（敌人模型）
+│   ├── Audio/SFX/             # AI 生成音效（11 种 SFX）
+│   ├── Sprites/UI/            # 升级图标+脚印贴图+冲刺图标
+│   ├── Models/                # 3D 模型（角色/僵尸/血瓶/Boss）
+│   ├── Prefabs/               # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar/EnemyFast/EnemyTank/EnemyBoss）
 │   ├── Scenes/
 │   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
 │   ├── Scripts/                # C# 脚本
@@ -55,8 +55,8 @@ Test/
 │   │   ├── PickupItem.cs       # 拾取物被吸引飞行
 │   │   ├── ObjectPool.cs       # 通用对象池（Spawn/Despawn 复用）
 │   │   └── Rotator.cs          # 收集物旋转动画
+│   ├── Settings/              # URP 渲染配置
 │   ├── Effects/                # VFX 特效（FireBall.vfx）
-│   └── TJGenerators/           # AI 生成资源缓存（含 SFX 音效）
 ├── Packages/
 └── ProjectSettings/
 ```
@@ -91,11 +91,13 @@ Test/
 | 敌人血量 | 僵尸初始2血，火球不再一击必杀，头顶显示血条 |
 | 多种敌人类型 | 普通僵尸 / 快速僵尸(HP1,Speed5) / 坦克僵尸(HP6,Speed1.5,1.5x体型) |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
-| 音效系统 | AudioManager 单例：10 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/游戏结束） |
-| 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失 |
+| 音效系统 | AudioManager 单例：11 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/闪避/游戏结束） |
+| 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失，程序化贴图+URP透明材质 |
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 对象池 | 火球和脚印预创建实例复用，减少 GC 压力 |
 | Layer 碰撞矩阵 | Player(8)/FireBall(9)/PickUp(10)，替代逐对 Physics.IgnoreCollision |
+| Boss 敌人 | 每10秒生成一个 Boss（2.5x体型，HP20+，必掉血瓶，掉3个经验） |
+| 计时器 | 右上角显示游戏存活时间（mm:ss） |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
 | 重新开始 | 通过 SceneManager 重新加载当前场景 |
 | 退出游戏 | Application.Quit() |
@@ -115,6 +117,21 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.1 (2026-07-20)
+
+- 新增 Boss 敌人系统：每10秒生成一个 Boss（独立 EnemyBoss.prefab，2.5x，HP20+难度，红色材质，必掉血瓶，掉3经验）
+- 新增计时器 UI（右上角，mm:ss 格式）
+- EnemyMovement：新增 isBoss 标记 + Boss 掉落3个经验块 + 血条高度按缩放调整 + 屏幕外隐藏血条
+- EnemySpawner：新增 bossTimer + SpawnBoss() + FormatTime()
+- 全部动画 clip 开启 loopTime
+- 修复敌人不可见问题：SkinnedMeshRenderer 设置 updateWhenOffscreen=true + Animator cullingMode=AlwaysAnimate + applyRootMotion=false
+- 修复 Boss 无动画问题：zombie_arm 控制器默认状态从 Death 改为 Idle
+- 修复脚印透明渲染：FootprintMat 改为 URP/Unlit + _SURFACE_TRANSPARENCY + 实例材质
+- 修复碰撞体过大问题：敌人 BoxCollider 缩小至 (0.6,1,0.6)，NavMeshAgent radius=0.3
+- 修复火球超时不回收问题：pool 为空时兜底 Destroy
+- 全部15个脚本补充函数级 XML 文档注释
+- 资源目录重组完成：Audio/SFX、Sprites/UI、Models、Settings
 
 #### v1.0 (2026-07-18)
 

@@ -34,6 +34,7 @@ public class UpgradeSystem : MonoBehaviour
     private HealthBar healthBar;           // 缓存 HealthBar 引用
     private MagnetDetector magnetDetector; // 缓存磁吸检测器引用
 
+    /// <summary>缓存 PlayerController、HealthBar、MagnetDetector 引用</summary>
     void Start()
     {
         player = GetComponent<PlayerController>();
@@ -41,6 +42,7 @@ public class UpgradeSystem : MonoBehaviour
         magnetDetector = GetComponentInChildren<MagnetDetector>();
     }
 
+    /// <summary>显示升级面板：随机打乱四种类型取前三个，填充卡片内容，暂停游戏</summary>
     public void ShowUpgrades()
     {
         UpgradeType[] shuffled = (UpgradeType[])allTypes.Clone();
@@ -66,6 +68,8 @@ public class UpgradeSystem : MonoBehaviour
         upgradePanel.SetActive(true);
     }
 
+    /// <summary>应用选中的升级效果并恢复游戏</summary>
+    /// <param name="type">升级类型</param>
     public void SelectUpgrade(UpgradeType type)
     {
         switch (type)
