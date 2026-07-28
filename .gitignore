@@ -43,3 +43,10 @@ Assets/Plugins/Editor/JetBrains*
 
 # Codely CLI (editor AI tool cache)
 .codely-cli/
+.codely/
+
+# Codely editor state
+.com-unity-codely.json
+
+# Screenshots
+screenshots/
