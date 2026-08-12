@@ -53,3 +53,12 @@ mem-log/
 
 # Screenshots
 screenshots/
+
+# TJGenerators temporary download folder
+Wuxia/Assets/TJGenerators/
+
+# Unity Tutorial Info (auto-generated)
+Wuxia/Assets/TutorialInfo/
+Wuxia/Assets/TutorialInfo.meta
+Wuxia/Assets/Readme.asset
+Wuxia/Assets/Readme.asset.meta

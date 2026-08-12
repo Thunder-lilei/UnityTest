@@ -7,12 +7,14 @@ Unity 开发学习仓库，存储学习过程中的所有产出。仓库本身�
 ```
 UnityTest/
 ├── Test/                      # 子项目1：基于 Roll-a-Ball 的 3D 生存游戏
+├── Wuxia/                     # 子项目2：武侠动作游戏 Demo（俯视角）
 └── README.md                  # 仓库总览
 ```
 
 | 子项目 | 状态 | 学习主题 |
 |--------|------|----------|
 | [Test](./Test) | 进行中 | Roll-a-Ball 教程扩展 → 3D 生存/战斗/升级游戏 |
+| [Wuxia](./Wuxia) | 进行中 | 武侠动作游戏 → C# · Lua · VFX Graph · 动作游戏开发 |
 
 > 后续新增子项目时，在此表中追加一行，并在 `UnityTest/` 根目录下新建对应文件夹。
 
@@ -271,6 +273,86 @@ Test/
 1. 用团结 Hub（或 Unity 2022.3 LTS）打开 `Test/` 目录
 2. 打开 `Assets/Scenes/迷你游戏.scene`
 3. 点击 Play 运行
+
+---
+
+## 子项目：Wuxia
+
+俯视角 3D 武侠动作游戏学习项目。以可扩展攻击系统为核心，逐步实现移动、战斗、VFX 特效、敌人 AI、打击反馈、场景打磨、性能优化、镜头展示和 Lua 热更。
+
+### 环境要求
+
+- **引擎**：团结引擎 2022.3.62t11（Tuanjie 1.9.3）
+- **渲染管线**：Universal Render Pipeline (URP)
+- **输入系统**：Input System Package (New)
+
+### 项目结构
+
+```
+Wuxia/
+├── Assets/
+│   ├── Scripts/
+│   │   ├── Core/           # 框架层：事件系统、接口定义（IDamageCalculator, ISkillLogic）
+│   │   ├── Player/         # 角色控制、输入响应
+│   │   ├── Combat/         # 攻击系统：配置、管理器
+│   │   ├── VFX/            # VFX 触发与生命周期管理
+│   │   ├── Camera/         # 镜头控制
+│   │   ├── AI/             # 敌人 AI（后期）
+│   │   └── Lua/            # xLua 接入与桥接层（中后期）
+│   ├── Data/Attacks/       # 攻击配置 ScriptableObjects
+│   ├── Prefabs/
+│   │   ├── Player/         # 玩家预制体（Ranger）
+│   │   ├── VFX/            # VFX 预制体
+│   │   └── Environment/    # 环境预制体
+│   ├── Model/              # 3D 模型素材（角色 FBX、动画、建筑、环境）
+│   ├── Scenes/
+│   │   └── SampleScene.scene  # 主场景（地面 + Player）
+│   ├── Settings/           # URP 配置、Input Actions、AnimatorController
+│   └── Art/                # 美术资源
+├── 计划/                    # 分阶段开发计划（P0-P10）
+├── 设计文档.md              # 项目设计文档
+└── CODELY.md               # Codely AI 结构化记忆
+```
+
+### 开发阶段
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| P0 · 基建 | URP 配置、Input Actions、目录结构、核心框架脚本 | ✅ 已完成 |
+| P1 · 移动 | Rigidbody 移动 + 走跑跳 + 俯视角摄像机 | 🔨 进行中 |
+| P2 · 攻击骨架 | AttackManager + AttackConfig + VFX 触发 | ⬜ 待开始 |
+| P3 · 自研 VFX | VFX Graph 刀光/拳风 | ⬜ 待开始 |
+| P4 · 音效 | AI 生成 SFX + BGM | ⬜ 待开始 |
+| P5 · 敌人系统 | 简单 AI + 受击反馈 | ⬜ 待开始 |
+| P6 · 打击反馈 | 顿帧、屏幕震动、闪白、残影 | ⬜ 待开始 |
+| P7 · 场景打磨 | 竹林场景 + 灯光 + 后期处理 | ⬜ 待开始 |
+| P8 · VFX 极限 | 万剑归宗 + Profiler 性能优化 | ⬜ 待开始 |
+| P9 · 镜头展示 | Cinemachine 运镜 + 录制 | ⬜ 待开始 |
+| P10 · Lua 接入 | xLua 框架 + 逻辑迁移 | ⬜ 待开始 |
+
+### 当前进展（P0 · 基建）
+
+- URP 渲染管线配置（URP-HighFidelity）
+- Input System 包安装（v1.14.4-t3），Active Input Handling 切换为 New
+- Input Actions 配置：3 个 Action Map（Movement / Combat / Camera），7 个 Action
+- 完整目录结构创建（14 个文件夹）
+- 核心框架脚本：IGameEvent、GameEventBus、IDamageCalculator、ISkillLogic
+
+### 当前进展（P1 · 移动）
+
+- KayKit Ranger 角色导入，FBX Rig 切换为 Humanoid
+- AnimatorController：1D Blend Tree（Idle/Walk/Run）+ Jump 状态
+- PlayerController 脚本：Rigidbody 移动 + 跳跃 + Animator 参数更新
+- 角色放入场景，Rigidbody + CapsuleCollider 配置
+- 待完成：InputReader 脚本、CameraFollow 脚本（用户手动编写）
+
+### 如何运行
+
+1. 用团结 Hub（或 Unity 2022.3 LTS）打开 `Wuxia/` 目录
+2. 打开 `Assets/Scenes/SampleScene.scene`
+3. 点击 Play 运行
+
+---
 
 ## 许可证
 
