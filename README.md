@@ -33,10 +33,13 @@ UnityTest/
 ```
 Test/
 ├── Assets/
-│   ├── Audio/SFX/             # AI 生成音效（11 种 SFX）
+│   ├── Audio/SFX/             # 音效（EnemyDeath/FireballLaunch/MonsterHit + 旧 SFX）
 │   ├── Sprites/UI/            # 升级图标+脚印贴图+冲刺图标
-│   ├── Models/                # 3D 模型（角色/僵尸/血瓶/Boss）
-│   ├── Prefabs/               # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar/EnemyFast/EnemyTank/EnemyBoss）
+│   ├── Models/                # 3D 模型（角色/僵尸/血瓶）
+│   ├── Kaykit/                # KayKit 低多边形素材包（岩石/树木）
+│   ├── Kenney/                # Kenney 低多边形素材包（自然/塔防）
+│   ├── Quaternius/            # Quaternius 素材包（僵尸/自然/栅栏/岩石）
+│   ├── Prefabs/               # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar/EnemyTank/EnemyBoss）
 │   ├── Scenes/
 │   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
 │   ├── Scripts/                # C# 脚本
@@ -56,7 +59,7 @@ Test/
 │   │   ├── ObjectPool.cs       # 通用对象池（Spawn/Despawn 复用）
 │   │   └── Rotator.cs          # 收集物旋转动画
 │   ├── Settings/              # URP 渲染配置
-│   ├── Effects/                # VFX 特效（FireBall.vfx）
+│   ├── Effects/                # VFX 特效（FireBallEnhanced.vfx + FireParticle.png）
 ├── Packages/
 └── ProjectSettings/
 ```
@@ -89,7 +92,7 @@ Test/
 | 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
 | 难度递增 | 每10秒：生成更快（-0.02s）、上限更高（+2）、血量更高（+1） |
 | 敌人血量 | 僵尸初始2血，火球不再一击必杀，头顶显示血条 |
-| 多种敌人类型 | 普通僵尸 / 快速僵尸(HP1,Speed5) / 坦克僵尸(HP6,Speed1.5,1.5x体型) |
+| 多种敌人类型 | 普通僵尸 / 快速僵尸(HP1,Speed5,运行时设置差异属性) / 坦克僵尸(HP6,Speed1.5,1.5x体型,Zombie_Chubby) / Boss(HP20+,2.5x,Zombie_Ribcage) |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
 | 音效系统 | AudioManager 单例：11 种音效（火球发射/命中/敌人死亡/受伤/死亡/拾取经验/拾取血瓶/升级/升级确认/闪避/游戏结束） |
 | 脚印系统 | 移动时左右交替生成脚印，2 秒渐隐消失，程序化贴图+URP透明材质 |
@@ -117,6 +120,21 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.2 (2026-08-12)
+
+- 清理 27 个未使用资产（~84MB）：旧角色动画 FBX、旧材质（Background/EnemyBoss/EnemyFast）、旧 Prefab（EnemyFast/SampleScene）、旧特效（FireBall.vfx）
+- 火球特效升级：FireBall.vfx → FireBallEnhanced.vfx（自定义 FireParticle.png 贴图，80 粒子/秒，5 段颜色渐变，尺寸先膨胀后收缩）
+- 修复火球 bug：忽略非敌人触发器（MagnetDetector）和 Player 层，VFX 对象池复用时 Reinit+Play 重启
+- EnemyTank/Boss 模型替换：Tank→Zombie_Chubby，Boss→Zombie_Ribcage（Quaternius Zombie Apocalypse Kit 同系列）
+- EnemyFast.prefab 废弃（bones[] 运行时丢失），Spawner 直接引用原始模型 prefab + 运行时设置差异属性
+- 场景自然素材重新布局：138 个实例统一放在 NatureDecoration 父对象下（围墙外密集森林环带+远景稀疏树林+散布岩石+灌木藤蔓+地形装饰+围墙栅栏）
+- Ground 材质改为 GroundGrass.mat（纯色草绿 URP Lit），320×320 大平面
+- 新增 Kaykit/Kenney/Quaternius 低多边形素材包（CC0 资产）
+- 旧 SFX 替换为命名清晰的音效文件（EnemyDeath.wav/FireballLaunch.wav/MonsterHit.wav）
+- 所有敌人 SkinnedMeshRenderer 设为 updateWhenOffscreen=True
+- 设计文档改名 DESIGN_DOC.md → 设计文档.md
+- .gitignore 新增 mem-log/ 排除规则
 
 #### v1.1 (2026-07-20)
 
