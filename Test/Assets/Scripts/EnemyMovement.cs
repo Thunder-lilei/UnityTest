@@ -15,6 +15,7 @@ public class EnemyMovement : MonoBehaviour
     public bool isBoss = false;            // 是否为 Boss
 
     private NavMeshAgent navMeshAgent;     // NavMesh 代理
+    private Animator animator;             // 动画控制器
     private bool isQuitting;               // 是否正在退出应用
     private float currentHealth;           // 当前血量
     private RectTransform healthFill;      // 血条填充矩形
@@ -25,8 +26,25 @@ public class EnemyMovement : MonoBehaviour
     void Start()
     {
         navMeshAgent = GetComponent<NavMeshAgent>();
+        animator = GetComponent<Animator>();
         currentHealth = maxHealth;
         mainCamera = Camera.main;
+
+        // 修复 Prefab Variant 导致的 rootBone 丢失：确保 SkinnedMeshRenderer 有 rootBone
+        // 否则 bounds 为零，相机视锥剔除会使怪物不可见
+        var armature = transform.Find("CharacterArmature");
+        if (armature != null)
+        {
+            var root = armature.Find("Root");
+            if (root != null)
+            {
+                foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    if (smr.rootBone == null)
+                        smr.rootBone = root;
+                }
+            }
+        }
 
         if (healthBarPrefab != null)
         {
@@ -44,6 +62,12 @@ public class EnemyMovement : MonoBehaviour
         if (player != null)
         {
             navMeshAgent.SetDestination(player.position);
+        }
+
+        // 根据 NavMeshAgent 速度驱动动画过渡（Idle ↔ Crawl/Walk）
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", navMeshAgent.velocity.magnitude);
         }
 
         // 血条朝向摄像机

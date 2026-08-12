@@ -113,6 +113,22 @@ public class EnemySpawner : MonoBehaviour
         GameObject prefab = enemyPrefabs[typeIndex];
         GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity, enemyGo.transform);
 
+        // 按类型设置差异属性（Fast=缩小+快速+低血量，Tank=放大+慢速+高血量）
+        switch (typeIndex)
+        {
+            case 1: // Fast
+                enemy.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+                var fastAgent = enemy.GetComponent<NavMeshAgent>();
+                if (fastAgent != null) fastAgent.speed = 5f;
+                var fastMat = Resources.Load<Material>("EnemyFast");
+                break;
+            case 2: // Tank
+                enemy.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                var tankAgent = enemy.GetComponent<NavMeshAgent>();
+                if (tankAgent != null) tankAgent.speed = 1.5f;
+                break;
+        }
+
         EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
         if (movement != null)
         {

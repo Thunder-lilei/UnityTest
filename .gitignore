@@ -48,5 +48,8 @@ Assets/Plugins/Editor/JetBrains*
 # Codely editor state
 .com-unity-codely.json
 
+# Codely memory logs
+mem-log/
+
 # Screenshots
 screenshots/

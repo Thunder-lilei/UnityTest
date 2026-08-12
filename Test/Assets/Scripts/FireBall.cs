@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.VFX;
 
 public class Fireball : MonoBehaviour, IPooledObject
 {
@@ -7,11 +8,22 @@ public class Fireball : MonoBehaviour, IPooledObject
 
     private float timer;                   // 存活计时器
     private ObjectPool pool;               // 所属对象池引用
+    private VisualEffect vfx;              // VFX 特效组件
 
-    /// <summary>对象池激活回调：重置存活计时器</summary>
+    void Awake()
+    {
+        vfx = GetComponent<VisualEffect>();
+    }
+
+    /// <summary>对象池激活回调：重置存活计时器并重启 VFX 特效</summary>
     public void OnSpawn()
     {
         timer = 0f;
+        if (vfx != null)
+        {
+            vfx.Reinit();
+            vfx.Play();
+        }
     }
 
     /// <summary>设置所属对象池引用</summary>
@@ -36,17 +48,26 @@ public class Fireball : MonoBehaviour, IPooledObject
         }
     }
 
-    /// <summary>碰撞回调：命中敌人扣血，命中后回收火球</summary>
+    /// <summary>碰撞回调：命中敌人扣血并回收，忽略非敌人的触发器（如磁铁检测器）和玩家自身</summary>
     /// <param name="other">碰撞到的对象</param>
     void OnTriggerEnter(Collider other)
     {
+        // 忽略非敌人的触发器（如 MagnetDetector）和玩家自身
+        if (other.isTrigger && !other.CompareTag("Enemy"))
+            return;
+        if (other.gameObject.layer == LayerMask.NameToLayer("Player"))
+            return;
+
+        // 命中敌人：扣血 + 播放命中音效
         if (other.CompareTag("Enemy"))
         {
             EnemyMovement enemy = other.GetComponent<EnemyMovement>();
             if (enemy != null)
                 enemy.TakeDamage(1f);
+            AudioManager.Instance?.PlayFireballHit();
         }
-        AudioManager.Instance?.PlayFireballHit();
+
+        // 无论命中什么，火球都回收
         if (pool != null)
             pool.Despawn(gameObject);
         else
