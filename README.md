@@ -107,6 +107,7 @@ Test/
 | 重新开始 | 通过 SceneManager 重新加载当前场景 |
 | 退出游戏 | Application.Quit() |
 | URP 渲染管线 | 从 Built-in 迁移至 Universal Render Pipeline |
+| 溶解 Shader | 手写 URP HLSL Shader（噪声驱动 AlphaClip + 边缘发光），敌人死亡时触发溶解消散 |
 | 中文支持 | TextMeshPro 使用微软雅黑字体资产 |
 
 ### 版本差异说明
@@ -122,6 +123,15 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.3 (2026-08-13)
+
+- 新增敌人死亡溶解特效：手写 URP HLSL Shader（Dissolve.shader，ShaderLab+HLSL，AlphaToMask+噪声+边缘发光）
+- 新增 DissolveEffect.cs 脚本：运行时替换材质+协程动画 DissolveAmount 0→1，逐帧推进溶解进度
+- 三个敌人 Prefab（Zombie_Basic/EnemyTank/EnemyBoss）已添加 DissolveEffect 组件
+- 主角模型替换为 Mixamo Y Bot（灰色人偶），新建 PlayerController.controller（Idle↔Walk↔Run）
+- 设计文档新增 6.2 节 Shader/材质/物体关系说明
+- 开发记录新增 C# 特性(Attribute)、协程(IEnumerator)知识点
 
 #### v1.2 (2026-08-12)
 

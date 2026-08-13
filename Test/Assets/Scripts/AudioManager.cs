@@ -16,6 +16,17 @@ public class AudioManager : MonoBehaviour
     public AudioSource upgradeConfirm;     // 升级选择确认音效
     public AudioSource dash;              // 闪避音效
 
+    [Header("连击音效设置")]
+    [Tooltip("每次连击音调升高幅度")]
+    public float comboPitchStep = 0.05f;
+    [Tooltip("连击最大音调倍数")]
+    public float maxComboPitch = 1.5f;
+    [Tooltip("连击重置时间（秒）")]
+    public float comboResetTime = 2f;
+
+    private int comboCount;
+    private float lastHitTime;
+
     /// <summary>单例初始化</summary>
     void Awake()
     {
@@ -25,9 +36,37 @@ public class AudioManager : MonoBehaviour
             Destroy(gameObject);
     }
 
+    void Update()
+    {
+        // 超过重置时间未命中，连击归零
+        if (comboCount > 0 && Time.time - lastHitTime >= comboResetTime)
+            comboCount = 0;
+    }
+
     public void PlayFireballLaunch() { if (fireballLaunch != null) fireballLaunch.Play(); }
-    public void PlayFireballHit() { if (fireballHit != null) fireballHit.Play(); }
-    public void PlayEnemyDeath() { if (enemyDeath != null) enemyDeath.Play(); }
+
+    /// <summary>火球命中：连击次数越多音调越高，超过重置时间则归零</summary>
+    public void PlayFireballHit()
+    {
+        if (fireballHit == null) return;
+
+        if (Time.time - lastHitTime < comboResetTime)
+            comboCount++;
+        else
+            comboCount = 0;
+
+        lastHitTime = Time.time;
+        fireballHit.pitch = Mathf.Min(1f + comboCount * comboPitchStep, maxComboPitch);
+        fireballHit.Play();
+    }
+
+    /// <summary>敌人死亡时重置连击</summary>
+    public void PlayEnemyDeath()
+    {
+        if (enemyDeath != null) enemyDeath.Play();
+        comboCount = 0;
+    }
+
     public void PlayPlayerHurt() { if (playerHurt != null) playerHurt.Play(); }
     public void PlayPlayerDeath() { if (playerDeath != null) playerDeath.Play(); }
     public void PlayPickupExp() { if (pickupExp != null) pickupExp.Play(); }

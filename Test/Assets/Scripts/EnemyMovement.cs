@@ -145,7 +145,12 @@ public class EnemyMovement : MonoBehaviour
         if (healthBarInstance != null)
             Destroy(healthBarInstance);
 
-        Destroy(gameObject);
+        // 触发溶解特效（替换直接销毁）
+        var dissolve = GetComponent<DissolveEffect>();
+        if (dissolve != null && dissolve.dissolveMaterial != null)
+            dissolve.StartDissolve();
+        else
+            Destroy(gameObject);
     }
 
     /// <summary>应用退出时设置标志，防止 OnDestroy 误触发掉落</summary>

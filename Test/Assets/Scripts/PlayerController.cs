@@ -40,7 +40,7 @@ public class PlayerController : MonoBehaviour
         Time.timeScale = 1;
         gameOverPanel.SetActive(false);
         rb = GetComponent<Rigidbody>();
-        animator = GetComponent<Animator>();
+        animator = GetComponentInChildren<Animator>();
         healthBar = GetComponent<HealthBar>();
         expBar = GetComponent<ExpBar>();
         lastFootprintPos = transform.position;

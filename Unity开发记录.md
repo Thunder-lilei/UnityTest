@@ -780,3 +780,74 @@ Python 在游戏领域几乎没有成功的热更案例。
 ### 当前趋势
 
 随着 **ILRuntime**、**HybridCLR（华佗）** 等 C# 热更方案的成熟，以及 Unity 官方对 C# 热更新的逐步支持，Lua 热更方案在新项目中的采用率在下降。但在已上线项目和大量存量项目中，Lua 仍然是主流的热更方案。
+
+---
+
+### C# 特性（Attribute）`[]`
+
+C# 中 `[]` 放在声明上方是**特性（Attribute）**，不是数组。特性给编译器和编辑器提供元信息，不影响运行时逻辑。
+
+常见 Unity 特性：
+
+| 特性 | 作用 | 示例 |
+|------|------|------|
+| `[Tooltip("xxx")]` | 鼠标悬停在 Inspector 字段上时弹出提示文字 | `[Tooltip("溶解材质")] public Material dissolveMaterial;` |
+| `[Range(0,1)]` | 在 Inspector 上显示滑条，限制取值范围 | `[Range(0,1)] public float dissolveAmount;` |
+| `[SerializeField]` | 让 private 字段在 Inspector 中显示 | `[SerializeField] private float speed;` |
+| `[HideInInspector]` | 让 public 字段在 Inspector 中隐藏 | `[HideInInspector] public float tempValue;` |
+| `[Header("xxx")]` | 在 Inspector 中添加分组标题 | `[Header("溶解参数")]` |
+| `[Space]` | 在 Inspector 中添加空行 | `[Space(10)]` |
+
+**与 Python 的区别**：Python 中 `[]` 是列表（数组），C# 中放在声明上方的 `[]` 是特性，两者完全不同。
+
+---
+
+### 协程（Coroutine）与 IEnumerator
+
+#### 什么是协程
+
+普通函数一帧内执行完毕。协程可以在多帧内逐步执行，适合做动画、延迟、渐进变化。
+
+#### 签名
+
+`IEnumerator` 是协程函数的固定返回类型。Unity 要求协程方法必须返回 `IEnumerator`：
+
+```csharp
+IEnumerator DissolveCoroutine()  // 签名必须是 IEnumerator
+{
+    // 第 1 帧执行到这里
+    yield return null;  // 暂停，下一帧继续
+
+    // 第 2 帧从这里继续
+    yield return null;  // 再暂停
+}
+```
+
+#### `yield return` 的含义
+
+| 写法 | 含义 |
+|------|------|
+| `yield return null` | 等一帧，下一帧继续 |
+| `yield return new WaitForSeconds(2f)` | 等 2 秒后继续 |
+| `yield return new WaitUntil(() => condition)` | 等条件为 true 后继续 |
+| `yield break` | 直接结束协程 |
+
+#### 启动与停止
+
+```csharp
+StartCoroutine(DissolveCoroutine());   // 启动
+StopCoroutine(coroutineInstance);       // 停止（需保存引用）
+```
+
+#### 协程 vs FixedUpdate
+
+| 对比 | 协程 | FixedUpdate |
+|------|------|-------------|
+| 执行频率 | 每帧一次（和 Update 一致） | 固定时间间隔（默认 0.02s） |
+| 适用场景 | 视觉渐变动画（跟随帧率） | 物理计算（Rigidbody/力） |
+| 生命周期 | 执行完就结束的一次性流程 | 组件启用时自动持续执行 |
+
+溶解特效用协程而非 FixedUpdate 的原因：
+1. 溶解是视觉效果，应该跟随渲染帧率（Update），不需要和物理同步
+2. FixedUpdate 会在组件启用时持续执行，而协程是"执行完就结束"的一次性流程，更适合溶解这种有明确终点的动画
+3. 协程可以用 `yield return null` 精确控制"每帧推进一步"，FixedUpdate 需要额外状态判断是否还在溶解中
