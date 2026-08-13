@@ -1,26 +1,36 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Game.Audio;
+using Game.Enemy;
+using Game.Combat;
+using Game.UI;
+using Game.Systems;
 
-public class CameraController : MonoBehaviour
+namespace Game.Player
 {
-    public GameObject player;             // 跟随目标
-    private Vector3 offset;               // 摄像机与玩家的初始偏移
     
-    /// <summary>计算摄像机与玩家的初始偏移</summary>
-    void Start()
+    public class CameraController : MonoBehaviour
     {
-        if (player == null)
-            return;
-        offset = transform.position - player.transform.position; 
-    }
-
-    /// <summary>在所有 Update 完成后跟随玩家位置（避免抖动）</summary>
-    void LateUpdate()
-    {
-        if(player != null)
+        public GameObject player;             // 跟随目标
+        private Vector3 offset;               // 摄像机与玩家的初始偏移
+        
+        /// <summary>计算摄像机与玩家的初始偏移</summary>
+        void Start()
         {
-            transform.position = player.transform.position + offset;    
+            if (player == null)
+                return;
+            offset = transform.position - player.transform.position; 
+        }
+    
+        /// <summary>在所有 Update 完成后跟随玩家位置（避免抖动）</summary>
+        void LateUpdate()
+        {
+            if(player != null)
+            {
+                transform.position = player.transform.position + offset;    
+            }
         }
     }
+    
 }

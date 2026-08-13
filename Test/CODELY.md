@@ -25,7 +25,8 @@
 - [2026-08-13 14:54:05] 场景中曾存在两个同名 Player 根对象（一个有 PlayerController 无模型，一个有 Y Bot 模型无 PlayerController），导致：①火球双发（两个 PlayerController 同时响应鼠标点击）；②角色环绕初始位置运动（PlayerController 操作空对象 Rigidbody，模型不受控）。已合并为单个 Player 对象，YBot 作为子对象（Animator 在 YBot 上）。另外 GameOverPanel 曾残留在激活状态 + currentHealth=0 导致进游戏秒死，已修复。
 - [2026-08-13 15:12:56] 主角模型已替换为标准 Mixamo Y Bot（灰色人偶）。资源从 C:\Learn\UnityTest\Wuxia\Assets\Model\Characters 复制到 Assets/Models/YBot/（Y Bot.fbx + Idle/Walking/Running/Jumping.fbx）。Animator Controller 为新建的 Assets/Animations/PlayerController.controller（Idle↔Walk↔Run，Speed 参数驱动）。PlayerController.cs 的 Start() 中 Animator 获取改为 GetComponentInChildren<Animator>()。YBot 通过 PrefabUtility.InstantiatePrefab 加载为 Player 子对象，Animator 在 YBot 上。
 - [2026-08-13 16:04:56] 敌人死亡溶解特效已完成：手写 URP HLSL Shader（Dissolve.shader，ShaderLab+HLSL，AlphaToMask+噪声+边缘发光）+ DissolveMat.mat + DissolveEffect.cs 脚本（运行时替换材质+动画DissolveAmount 0→1）。三个敌人 Prefab（Zombie_Basic/EnemyTank/EnemyBoss）已添加 DissolveEffect 组件并关联材质。EnemyMovement.cs Die() 方法已集成溶解逻辑。教程文档：溶解特效制作教程.md。
-
+- [2026-08-13 19:13:34] v1.4 架构重构完成：①PlayerController 拆分为 4 个组件（PlayerMovement/PlayerCombat/PlayerHealth/PlayerInteraction），用 C# Action 事件解耦（OnDashStateChanged/OnPlayerDied）②ScriptableObject 敌人配置（EnemyData.cs + 4 个 .asset 文件）③20 个脚本添加命名空间（Game.Player/Enemy/Combat/Audio/UI/Systems）+ Game.asmdef 程序集定义 ④4 个 EditMode 测试文件（18 个用例）+ 测试文档 ⑤材质命名统一（wall→Wall, Dynamic Obstacle→DynamicObstacle, FootprintMat→Footprint, DissolveMat→Dissolve）
+- [2026-08-13 19:56:26] URP Bloom 后处理不生效问题：URPRenderer.asset 中 postProcessData={fileID:0}（为空），导致后处理 Pass 未启用。Volume + Profile 配置正确（Bloom intensity=3, threshold=0.5, Vignette intensity=0.4），但渲染器未执行后处理。待解决。
 
 ### Reference
 

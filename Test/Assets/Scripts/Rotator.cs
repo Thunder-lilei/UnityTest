@@ -1,12 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Game.Audio;
+using Game.Player;
+using Game.Enemy;
+using Game.Combat;
+using Game.UI;
 
-public class Rotator : MonoBehaviour
+namespace Game.Systems
 {
-    /// <summary>三轴非均匀旋转，使用 unscaledDeltaTime 确保暂停时仍旋转</summary>
-    void Update()
+    
+    public class Rotator : MonoBehaviour
     {
-        transform.Rotate (new Vector3 (15, 30, 45) * Time.unscaledDeltaTime);
+        /// <summary>三轴非均匀旋转，使用 unscaledDeltaTime 确保暂停时仍旋转</summary>
+        void Update()
+        {
+            transform.Rotate (new Vector3 (15, 30, 45) * Time.unscaledDeltaTime);
+        }
     }
+    
 }

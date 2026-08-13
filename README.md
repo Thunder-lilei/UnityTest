@@ -47,9 +47,15 @@ Test/
 │   ├── Scripts/                # C# 脚本
 │   │   ├── PlayerController.cs # 玩家控制、动画、脚印、火球、经验/血量
 │   │   ├── CameraController.cs # 摄像机跟随
-│   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐 + 死亡掉落
-│   │   ├── EnemySpawner.cs     # 敌人持续生成（屏幕外刷新）
+│   │   ├── PlayerMovement.cs  # 玩家移动+朝向+闪避+脚印
+│   │   ├── PlayerCombat.cs    # 火球发射（扇形多发）
+│   │   ├── PlayerHealth.cs    # 血量管理+受击+死亡+游戏结束
+│   │   ├── PlayerInteraction.cs # 拾取经验/血瓶
+│   │   ├── EnemyData.cs       # ScriptableObject 敌人配置
+│   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐 + 死亡掉落 + 溶解
+│   │   ├── EnemySpawner.cs     # 敌人持续生成（数据驱动配置）
 │   │   ├── FireBall.cs         # 火球飞行与碰撞
+│   │   ├── DissolveEffect.cs   # 死亡溶解特效（材质替换+协程动画）
 │   │   ├── Footprint.cs        # 脚印渐隐消失
 │   │   ├── AudioManager.cs     # 音效管理器（单例）
 │   │   ├── HealthBar.cs        # 血量条 UI
@@ -108,6 +114,10 @@ Test/
 | 退出游戏 | Application.Quit() |
 | URP 渲染管线 | 从 Built-in 迁移至 Universal Render Pipeline |
 | 溶解 Shader | 手写 URP HLSL Shader（噪声驱动 AlphaClip + 边缘发光），敌人死亡时触发溶解消散 |
+| ScriptableObject | 敌人数据驱动配置（.asset 文件），Inspector 调参数不改代码 |
+| 事件解耦 | C# Action 事件系统（OnDashStateChanged/OnPlayerDied），组件间无直接引用 |
+| 命名空间 | 脚本按模块分组（Game.Player/Enemy/Combat/Audio/UI/Systems）+ asmdef 程序集 |
+| EditMode 测试 | 17 个自动化测试用例（ObjectPool/HealthBar/ExpBar/EnemyData） |
 | 中文支持 | TextMeshPro 使用微软雅黑字体资产 |
 
 ### 版本差异说明
@@ -123,6 +133,15 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.4 (2026-08-13)
+
+- 架构重构：PlayerController 拆分为 4 个组件（PlayerMovement/PlayerCombat/PlayerHealth/PlayerInteraction），C# Action 事件解耦
+- ScriptableObject 敌人数据驱动配置（EnemyData.cs + 4 个 .asset 文件，Inspector 调参数不改代码）
+- 20 个脚本添加命名空间分组（Game.Player/Enemy/Combat/Audio/UI/Systems）+ Game.asmdef 程序集定义
+- 17 个 EditMode 测试用例（ObjectPool/HealthBar/ExpBar/EnemyData）+ 测试文档
+- 材质命名统一（PascalCase 规范）
+- 新增金属场景道具（火把/灯笼/宝箱）
 
 #### v1.3 (2026-08-13)
 

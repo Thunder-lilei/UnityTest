@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf89579fba10f274ea6277b9fa16a8fc, type: 3}
+  m_Name: Enemy_Fast
+  m_EditorClassIdentifier: 
+  enemyName: "\u5FEB\u901F\u50F5\u5C38"
+  isBoss: 0
+  maxHealth: 1
+  moveSpeed: 5
+  scale: 0.7
+  dropChance: 0.3
+  expDrop: 1
+  prefab: {fileID: 8312372521104239757, guid: d6ff159feabf5fe4989c3ef7ec5692ab, type: 3}
