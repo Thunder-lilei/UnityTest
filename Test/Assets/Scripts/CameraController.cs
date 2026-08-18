@@ -1,15 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using Game.Audio;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Player
 {
     
+    /// <summary>摄像机跟随：保持与玩家的初始偏移，LateUpdate 中跟随避免抖动</summary>
     public class CameraController : MonoBehaviour
     {
         public GameObject player;             // 跟随目标

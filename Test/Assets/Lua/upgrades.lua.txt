@@ -1,0 +1,108 @@
+-- ============================================================
+-- 升级配置表（Lua 驱动）
+-- 修改此文件即可调整升级选项，无需重新编译 C# 代码
+-- 新增升级类型只需在 upgrades 表中添加一项
+-- ============================================================
+
+local M = {}
+
+-- 升级选项列表
+-- action 字段对应 C# UpgradeSystem.ApplyAction 的 switch 分支
+-- icon 字段对应 Resources/Icons/ 下的图片文件名（不含扩展名）
+M.upgrades = {
+    {
+        id = "max_health",
+        title = "+ 最大血量",
+        desc = "最大生命值 +20，同时回复20点血量",
+        action = "IncreaseMaxHealth",
+        value = 20,
+        icon = "HealthIcon"
+    },
+    {
+        id = "speed",
+        title = "+ 移动速度",
+        desc = "移动速度 +2",
+        action = "AddSpeed",
+        value = 2,
+        icon = "SpeedIcon"
+    },
+    {
+        id = "fireball_count",
+        title = "+ 火球数量",
+        desc = "火球发射数量 +1",
+        action = "AddFireballCount",
+        value = 1,
+        icon = "FireballIcon"
+    },
+    {
+        id = "magnet_range",
+        title = "+ 吸取范围",
+        desc = "吸取半径 +1",
+        action = "IncreaseMagnetRadius",
+        value = 1,
+        icon = "MagnetIcon"
+    },
+    {
+        id = "fire_rate",
+        title = "- 火球冷却",
+        desc = "火球发射间隔 -0.1秒",
+        action = "ReduceFireInterval",
+        value = 0.1,
+        icon = "FireRateIcon"
+    },
+    {
+        id = "melee_damage",
+        title = "+ 斩击伤害",
+        desc = "斩击伤害 +1",
+        action = "IncreaseMeleeDamage",
+        value = 1,
+        icon = "SwordIcon"
+    },
+    {
+        id = "melee_cooldown",
+        title = "- 斩击冷却",
+        desc = "斩击间隔 -0.1秒",
+        action = "ReduceSlashInterval",
+        value = 0.1,
+        icon = "SlashCooldownIcon"
+    }
+    -- 新增加升级只需在此添加一项，例如：
+    -- {
+    --     id = "dash_cooldown",
+    --     title = "- 闪避冷却",
+    --     desc = "闪避冷却时间 -0.5秒",
+    --     action = "ReduceDashCooldown",
+    --     value = 0.5,
+    --     icon = "DashIcon"
+    -- },
+}
+
+--- 随机选 count 个不重复的升级
+--- @param count number 选择的数量
+--- @return table 选中升级的列表
+function M.getRandomUpgrades(count)
+    local pool = {}
+    for _, v in ipairs(M.upgrades) do
+        pool[#pool + 1] = v
+    end
+
+    -- Fisher-Yates 洗牌
+    for i = #pool, 2, -1 do
+        local j = math.random(1, i)
+        pool[i], pool[j] = pool[j], pool[i]
+    end
+
+    local result = {}
+    for i = 1, math.min(count, #pool) do
+        result[i] = pool[i]
+    end
+    return result
+end
+
+--- 获取升级总数
+--- @return number
+function M.getUpgradeCount()
+    return #M.upgrades
+end
+
+return M

@@ -1,13 +1,9 @@
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
 
 namespace Game.Systems
 {
     
+    /// <summary>可拾取物：被磁铁吸引后朝玩家匀速飞行</summary>
     public class PickupItem : MonoBehaviour
     {
         private Transform target;              // 吸引目标（玩家）

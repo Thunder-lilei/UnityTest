@@ -1,13 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.UI;
 using Game.Audio;
-using Game.Player;
 using Game.Combat;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Enemy
 {
@@ -30,7 +24,6 @@ namespace Game.Enemy
     
         private NavMeshAgent navMeshAgent;
         private Animator animator;
-        private bool isQuitting;
         private float currentHealth;
         private RectTransform healthFill;
         private GameObject healthBarInstance;
@@ -90,7 +83,7 @@ namespace Game.Enemy
         /// <summary>每帧追踪玩家位置，血条朝向摄像机，屏幕外隐藏血条</summary>
         void Update()
         {
-            if (player != null)
+            if (player != null && navMeshAgent != null && navMeshAgent.isOnNavMesh && navMeshAgent.enabled)
             {
                 navMeshAgent.SetDestination(player.position);
             }
@@ -176,16 +169,7 @@ namespace Game.Enemy
                 Destroy(gameObject);
         }
     
-        void OnApplicationQuit()
-        {
-            isQuitting = true;
-        }
-    
-        void OnDestroy()
-        {
-            if (isQuitting)
-                return;
-        }
+
     }
     
 }

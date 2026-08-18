@@ -1,9 +1,4 @@
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Combat;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Enemy
 {

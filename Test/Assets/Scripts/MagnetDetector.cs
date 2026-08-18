@@ -1,13 +1,10 @@
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
 using Game.UI;
 
 namespace Game.Systems
 {
     
+    /// <summary>磁铁检测器：检测拾取物进入范围并启动吸引，满血时忽略血瓶</summary>
     public class MagnetDetector : MonoBehaviour
     {
         public float radius = 3f;              // 吸取半径

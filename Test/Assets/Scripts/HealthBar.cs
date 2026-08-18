@@ -1,18 +1,13 @@
 using UnityEngine;
-using UnityEngine.UI;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.Systems;
 
 namespace Game.UI
 {
     
+    /// <summary>血量条：管理血量数值与 UI 填充比例，支持扣血、回血、增加上限</summary>
     public class HealthBar : MonoBehaviour
     {
         public RectTransform fillRect;         // 血量条填充矩形
-        public float maxHealth = 100f;         // 最大血量
+        public float maxHealth = 200f;        // 最大血量（500 敌人规模下需要更高生存）
         private float currentHealth;           // 当前血量
     
         /// <summary>初始化血量并更新 UI</summary>

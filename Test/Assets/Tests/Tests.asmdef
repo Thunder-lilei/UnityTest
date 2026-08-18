@@ -7,6 +7,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": ["nunit.framework.dll"],
+    "references": ["Game", "UnityEditor.TestRunner", "UnityEngine.TestRunner"],
     "autoReferenced": false,
     "defineConstraints": ["UNITY_INCLUDE_TESTS"],
     "versionDefines": [],

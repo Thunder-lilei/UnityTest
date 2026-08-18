@@ -1,13 +1,9 @@
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
 
 namespace Game.Systems
 {
     
+    /// <summary>脚印：对象池复用，逐帧淡出 alpha 后自动回收</summary>
     public class Footprint : MonoBehaviour, IPooledObject
     {
         public float lifetime = 2f;            // 脚印存活时间（秒）

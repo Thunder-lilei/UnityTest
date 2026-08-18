@@ -1,116 +1,138 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Audio;
-using Game.Player;
-using Game.Enemy;
 using Game.Combat;
+using Game.Player;
 using Game.Systems;
 
 namespace Game.UI
 {
     
-    /// <summary>升级选择系统：升级时暂停游戏，四选三随机，应用升级效果</summary>
+    /// <summary>
+    /// 升级选择系统（Lua 驱动版）
+    /// 升级数据从 upgrades.lua 加载，C# 只负责执行
+    /// 新增升级类型只需改 Lua 文件，无需改 C# 代码
+    /// </summary>
     public class UpgradeSystem : MonoBehaviour
     {
+        [Header("UI 引用")]
         public GameObject upgradePanel;
         public UpgradeCard[] cards;
-        public Sprite[] icons;
-    
-        public enum UpgradeType { MaxHealth, Speed, FireballCount, MagnetRange }
-        private const int OPTION_COUNT = 3;
-    
-        private static readonly UpgradeType[] allTypes = {
-            UpgradeType.MaxHealth,
-            UpgradeType.Speed,
-            UpgradeType.FireballCount,
-            UpgradeType.MagnetRange
-        };
-    
-        private static readonly string[] titles = {
-            "+ \u6700\u5927\u8840\u91cf",
-            "+ \u79fb\u52a8\u901f\u5ea6",
-            "+ \u706b\u7403\u6570\u91cf",
-            "+ \u5438\u53d6\u8303\u56f4"
-        };
-    
-        private static readonly string[] descs = {
-            "\u6700\u5927\u751f\u547d\u503c +20\uff0c\u540c\u65f6\u56de\u590d20\u70b9\u8840\u91cf",
-            "\u79fb\u52a8\u901f\u5ea6 +2",
-            "\u706b\u7403\u53d1\u5c04\u6570\u91cf +1",
-            "\u5438\u53d6\u534a\u5f84 +1"
-        };
-    
+
         // 拆分后引用各子系统组件
         private PlayerMovement playerMovement;
         private PlayerCombat playerCombat;
+        private MeleeCombat meleeCombat;
         private HealthBar healthBar;
         private MagnetDetector magnetDetector;
-    
+
         /// <summary>缓存各组件引用</summary>
         void Start()
         {
             playerMovement = GetComponent<PlayerMovement>();
             playerCombat = GetComponent<PlayerCombat>();
+            meleeCombat = GetComponent<MeleeCombat>();
             healthBar = GetComponent<HealthBar>();
             magnetDetector = GetComponentInChildren<MagnetDetector>();
         }
-    
-        /// <summary>显示升级面板：随机打乱四种类型取前三个，暂停游戏</summary>
+
+        /// <summary>
+        /// 显示升级面板：从 Lua 获取随机升级选项，填充卡片，暂停游戏
+        /// 数据来源：LuaManager → upgrades.lua → getRandomUpgrades(3)
+        /// </summary>
         public void ShowUpgrades()
         {
-            UpgradeType[] shuffled = (UpgradeType[])allTypes.Clone();
-            for (int i = shuffled.Length - 1; i > 0; i--)
+            // 从 Lua 获取随机升级
+            List<UpgradeData> selected = LuaManager.Instance?.GetRandomUpgrades(cards.Length);
+
+            if (selected == null || selected.Count == 0)
             {
-                int j = Random.Range(0, i + 1);
-                UpgradeType temp = shuffled[i];
-                shuffled[i] = shuffled[j];
-                shuffled[j] = temp;
+                Debug.LogError("[UpgradeSystem] Lua 返回的升级列表为空");
+                return;
             }
-    
-            for (int i = 0; i < cards.Length; i++)
+
+            // 填充卡片
+            for (int i = 0; i < cards.Length && i < selected.Count; i++)
             {
-                UpgradeType type = shuffled[i];
-                cards[i].SetData(type, titles[(int)type], descs[(int)type]);
-                if (icons != null && icons.Length > (int)type && cards[i].icon != null)
-                    cards[i].icon.sprite = icons[(int)type];
-                cards[i].SetupCallback(this);
+                UpgradeData data = selected[i];
+                cards[i].SetData(data.title, data.desc, data.iconName);
+                cards[i].SetupCallback(this, data.action, data.value);
             }
-    
+
             // 暂停所有子系统
             if (playerMovement != null) playerMovement.SetPaused(true);
             if (playerCombat != null) playerCombat.SetPaused(true);
+            if (meleeCombat != null) meleeCombat.SetPaused(true);
             Time.timeScale = 0;
             upgradePanel.SetActive(true);
+
+            // 显示鼠标供玩家选择升级卡片
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
         }
-    
-        /// <summary>应用选中的升级效果并恢复游戏</summary>
-        public void SelectUpgrade(UpgradeType type)
+
+        /// <summary>
+        /// 应用选中的升级效果并恢复游戏
+        /// action 字符串由 Lua 配置定义，在此分发到对应 C# 方法
+        /// </summary>
+        /// <param name="action">Lua 配置中的 action 字段</param>
+        /// <param name="value">Lua 配置中的 value 字段</param>
+        public void SelectUpgrade(string action, float value)
         {
-            switch (type)
-            {
-                case UpgradeType.MaxHealth:
-                    if (healthBar != null)
-                        healthBar.IncreaseMaxHealth(20f);
-                    break;
-                case UpgradeType.Speed:
-                    if (playerMovement != null)
-                        playerMovement.speed += 2f;
-                    break;
-                case UpgradeType.FireballCount:
-                    if (playerCombat != null)
-                        playerCombat.fireballCount += 1;
-                    break;
-                case UpgradeType.MagnetRange:
-                    if (magnetDetector != null)
-                        magnetDetector.IncreaseRadius(1f);
-                    break;
-            }
-    
+            ApplyAction(action, value);
+
             AudioManager.Instance?.PlayUpgradeConfirm();
             Time.timeScale = 1;
             if (playerMovement != null) playerMovement.SetPaused(false);
             if (playerCombat != null) playerCombat.SetPaused(false);
+            if (meleeCombat != null) meleeCombat.SetPaused(false);
             upgradePanel.SetActive(false);
+
+            // 隐藏鼠标恢复游戏操作
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+
+        /// <summary>
+        /// 根据 action 字符串分发到对应 C# 方法
+        /// 新增升级时只需在 Lua 中添加 action 名，并在此添加 case
+        /// </summary>
+        private void ApplyAction(string action, float value)
+        {
+            switch (action)
+            {
+                case "IncreaseMaxHealth":
+                    if (healthBar != null)
+                        healthBar.IncreaseMaxHealth(value);
+                    break;
+                case "AddSpeed":
+                    if (playerMovement != null)
+                        playerMovement.speed += value;
+                    break;
+                case "AddFireballCount":
+                    if (playerCombat != null)
+                        playerCombat.fireballCount += (int)value;
+                    break;
+                case "IncreaseMagnetRadius":
+                    if (magnetDetector != null)
+                        magnetDetector.IncreaseRadius(value);
+                    break;
+                case "ReduceFireInterval":
+                    if (playerCombat != null)
+                        playerCombat.ReduceFireInterval(value);
+                    break;
+                case "IncreaseMeleeDamage":
+                    if (meleeCombat != null)
+                        meleeCombat.slashDamage += value;
+                    break;
+                case "ReduceSlashInterval":
+                    if (meleeCombat != null)
+                        meleeCombat.ReduceSlashInterval(value);
+                    break;
+                default:
+                    Debug.LogWarning($"[UpgradeSystem] 未知升级 action: {action}，请在 ApplyAction 中添加对应 case");
+                    break;
+            }
         }
     }
-    
 }

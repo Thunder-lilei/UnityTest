@@ -1,14 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
 
 namespace Game.Systems
 {
     
+    /// <summary>通用对象池：预创建对象，Spawn/Despawn 复用，池空时自动扩容</summary>
     public class ObjectPool : MonoBehaviour
     {
         public GameObject prefab;              // 池中对象 Prefab

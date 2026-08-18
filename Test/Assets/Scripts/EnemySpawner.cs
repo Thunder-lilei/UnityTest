@@ -2,11 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using TMPro;
-using Game.Audio;
-using Game.Player;
-using Game.Combat;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Enemy
 {
@@ -16,36 +11,36 @@ namespace Game.Enemy
     {
         [Header("敌人配置")]
         [Tooltip("敌人数据配置数组（普通/快速/坦克）")]
-        public EnemyData[] enemyConfigs;       // 敌人配置（ScriptableObject）
+        public EnemyData[] enemyConfigs;
     
         [Tooltip("Boss 数据配置")]
-        public EnemyData bossConfig;            // Boss 配置
+        public EnemyData bossConfig;
     
         [Header("生成参数")]
-        public Transform player;                // 玩家 Transform（传递给生成的敌人）
-        public int maxCount = 30;               // 最大敌人数
-        public float spawnInterval = 0.5f;      // 生成间隔（秒）
-        public float spawnMargin = 2f;          // 屏幕外边距
-        public GameObject enemyGo;              // 敌人父物体
-        public TextMeshProUGUI timerText;       // 计时器 UI
-        public float bossInterval = 10f;       // Boss 生成间隔
+        public Transform player;
+        public int maxCount = 100;              // 最大敌人数（初始值，运行时随难度递增）
+        public float spawnInterval = 0.3f;       // 生成间隔（初始值，运行时随难度递增）
+        public float spawnMargin = 2f;
+        public GameObject enemyGo;
+        public TextMeshProUGUI timerText;
+        public float bossInterval = 30f;        // Boss 生成间隔
     
         private Camera mainCamera;
         private float timer;
         private List<GameObject> enemies = new List<GameObject>();
         private float gameTimer;
         private float bossTimer;
+        private float cleanupTimer;             // 敌人列表清理计时器
     
-        /// <summary>初始化相机和计时器</summary>
         void Start()
         {
             mainCamera = Camera.main;
             timer = 0f;
             gameTimer = 0f;
             bossTimer = 0f;
+            cleanupTimer = 0f;
         }
     
-        /// <summary>每帧更新计时器 UI、难度递增参数、普通敌人生成、Boss 生成</summary>
         void Update()
         {
             gameTimer += Time.deltaTime;
@@ -54,8 +49,8 @@ namespace Game.Enemy
                 timerText.text = FormatTime(gameTimer);
     
             int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
-            spawnInterval = Mathf.Max(0.15f, 0.5f - difficultyLevel * 0.02f);
-            maxCount = Mathf.Min(60, 30 + difficultyLevel * 2);
+            spawnInterval = Mathf.Max(0.05f, 0.3f - difficultyLevel * 0.015f);
+            maxCount = Mathf.Min(500, 100 + difficultyLevel * 20);
     
             timer += Time.deltaTime;
     
@@ -71,9 +66,16 @@ namespace Game.Enemy
                 bossTimer = 0f;
                 SpawnBoss();
             }
+    
+            // 降低 List 清理频率（每 2 秒一次，而非每次生成前）
+            cleanupTimer += Time.deltaTime;
+            if (cleanupTimer >= 2f)
+            {
+                cleanupTimer = 0f;
+                enemies.RemoveAll(e => e == null);
+            }
         }
     
-        /// <summary>格式化游戏时间为 mm:ss</summary>
         string FormatTime(float time)
         {
             int minutes = Mathf.FloorToInt(time / 60f);
@@ -81,7 +83,6 @@ namespace Game.Enemy
             return string.Format("{0:00}:{1:00}", minutes, seconds);
         }
     
-        /// <summary>生成 Boss：从屏幕外刷新，不受 maxCount 限制</summary>
         void SpawnBoss()
         {
             Vector3 spawnPos = GetSpawnPositionOutsideViewport();
@@ -96,17 +97,14 @@ namespace Game.Enemy
             {
                 movement.player = player;
                 int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
-                movement.Initialize(bossConfig, difficultyLevel * 2f);
+                movement.Initialize(bossConfig, difficultyLevel * 1f);  // Boss HP 增长放缓
             }
     
             enemies.Add(boss);
         }
     
-        /// <summary>生成普通敌人：随机类型、难度递增血量、受 maxCount 限制</summary>
         void SpawnEnemy()
         {
-            enemies.RemoveAll(e => e == null);
-    
             if (enemies.Count >= maxCount) return;
     
             Vector3 spawnPos = GetSpawnPositionOutsideViewport();
@@ -114,7 +112,6 @@ namespace Game.Enemy
     
             int difficultyLevel = Mathf.FloorToInt(gameTimer / 10f);
     
-            // 随机选敌人类型，早期只有普通，10秒后加入快速，20秒后加入坦克
             int typeCount = Mathf.Min(enemyConfigs.Length, 1 + Mathf.FloorToInt(gameTimer / 10f));
             int typeIndex = Random.Range(0, typeCount);
     
@@ -133,7 +130,6 @@ namespace Game.Enemy
             enemies.Add(enemy);
         }
     
-        /// <summary>计算视口外边缘的 NavMesh 上的生成位置</summary>
         Vector3 GetSpawnPositionOutsideViewport()
         {
             Vector3[] viewportCorners = new Vector3[]

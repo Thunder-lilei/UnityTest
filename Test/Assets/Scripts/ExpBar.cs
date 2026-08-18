@@ -1,14 +1,11 @@
 using UnityEngine;
 using TMPro;
 using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.Systems;
 
 namespace Game.UI
 {
     
+    /// <summary>经验条：累计经验、升级、触发升级选择面板</summary>
     public class ExpBar : MonoBehaviour
     {
         public RectTransform fillRect;         // 经验条填充矩形

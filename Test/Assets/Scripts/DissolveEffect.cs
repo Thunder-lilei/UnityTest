@@ -1,10 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Combat
 {

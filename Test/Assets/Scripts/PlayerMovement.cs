@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Game.Audio;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
 using Game.Systems;
 
 namespace Game.Player

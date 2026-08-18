@@ -1,14 +1,13 @@
 using UnityEngine;
 using UnityEngine.VFX;
 using Game.Audio;
-using Game.Player;
 using Game.Enemy;
-using Game.UI;
 using Game.Systems;
 
 namespace Game.Combat
 {
     
+    /// <summary>火球：对象池复用，飞行命中敌人扣血，超时或碰撞后回收</summary>
     public class Fireball : MonoBehaviour, IPooledObject
     {
         public float speed = 20f;              // 飞行速度

@@ -38,36 +38,50 @@ Test/
 │   ├── Audio/SFX/             # 音效（EnemyDeath/FireballLaunch/MonsterHit + 旧 SFX）
 │   ├── Sprites/UI/            # 升级图标+脚印贴图+冲刺图标
 │   ├── Models/                # 3D 模型（角色/僵尸/血瓶）
-│   ├── Kaykit/                # KayKit 低多边形素材包（岩石/树木）
-│   ├── Kenney/                # Kenney 低多边形素材包（自然/塔防）
-│   ├── Quaternius/            # Quaternius 素材包（僵尸/自然/栅栏/岩石）
-│   ├── Prefabs/               # 预制体（PickUp/DynamicBox/Quad/FireBall/HealthPotion/EnemyHealthBar/EnemyTank/EnemyBoss）
+│   ├── Kaykit/                # KayKit 低多边形素材包（岩石/树木/火把/宝箱）
+│   ├── Kenney/                # Kenney 低多边形素材包（自然/建筑/栅栏）
+│   ├── Quaternius/            # Quaternius 素材包（僵尸/自然/建筑/RTS）
+│   ├── Prefabs/               # 预制体（PickUp/DynamicBox/FireBall/HealthPotion/EnemyHealthBar/EnemyTank/EnemyBoss/SlashEffect/Tiles）
 │   ├── Scenes/
-│   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据）
+│   │   └── 迷你游戏.scene       # 主关卡（含 NavMesh 烘焙数据 + 瓦片地图）
 │   ├── Scripts/                # C# 脚本
-│   │   ├── PlayerController.cs # 玩家控制、动画、脚印、火球、经验/血量
-│   │   ├── CameraController.cs # 摄像机跟随
 │   │   ├── PlayerMovement.cs  # 玩家移动+朝向+闪避+脚印
-│   │   ├── PlayerCombat.cs    # 火球发射（扇形多发）
-│   │   ├── PlayerHealth.cs    # 血量管理+受击+死亡+游戏结束
+│   │   ├── PlayerCombat.cs    # 火球自动发射（OverlapSphere索敌+定时）
+│   │   ├── PlayerHealth.cs    # 血量管理+受击DPS上限+死亡+游戏结束
 │   │   ├── PlayerInteraction.cs # 拾取经验/血瓶
 │   │   ├── EnemyData.cs       # ScriptableObject 敌人配置
 │   │   ├── EnemyMovement.cs    # 敌人 NavMesh 追逐 + 死亡掉落 + 溶解
-│   │   ├── EnemySpawner.cs     # 敌人持续生成（数据驱动配置）
+│   │   ├── EnemySpawner.cs     # 敌人持续生成（数据驱动配置+难度递增）
+│   │   ├── MeleeCombat.cs     # 近战斩击（自动半圆范围攻击+Dot检测）
+│   │   ├── SlashEffect.cs     # 斩击粒子特效（定时销毁）
 │   │   ├── FireBall.cs         # 火球飞行与碰撞
 │   │   ├── DissolveEffect.cs   # 死亡溶解特效（材质替换+协程动画）
 │   │   ├── Footprint.cs        # 脚印渐隐消失
-│   │   ├── AudioManager.cs     # 音效管理器（单例）
+│   │   ├── AudioManager.cs     # 音效管理器（单例+音量控制）
 │   │   ├── HealthBar.cs        # 血量条 UI
 │   │   ├── ExpBar.cs           # 经验条 UI + 升级系统
-│   │   ├── UpgradeSystem.cs    # 升级选择系统（暂停/四选三/应用效果）
-│   │   ├── UpgradeCard.cs      # 升级卡片 UI（悬浮高亮/点击回调）
+│   │   ├── UpgradeSystem.cs    # 升级选择系统（Lua驱动+暂停/应用效果）
+│   │   ├── UpgradeCard.cs      # 升级卡片 UI（图标+悬浮高亮+点击回调）
+│   │   ├── LuaManager.cs      # xLua 运行时管理器（LuaEnv生命周期）
+│   │   ├── PauseMenu.cs       # 暂停菜单（ESC+面板互斥+鼠标管理）
+│   │   ├── SettingsManager.cs # 设置管理（音量Slider+PlayerPrefs持久化）
 │   │   ├── MagnetDetector.cs   # 磁吸范围检测
 │   │   ├── PickupItem.cs       # 拾取物被吸引飞行
 │   │   ├── ObjectPool.cs       # 通用对象池（Spawn/Despawn 复用）
-│   │   └── Rotator.cs          # 收集物旋转动画
+│   │   ├── CameraController.cs # 摄像机跟随
+│   │   ├── Rotator.cs          # 收集物旋转动画
+│   │   ├── ETFGRotation.cs    # 斩击特效旋转脚本
+│   │   └── Game.asmdef        # 主程序集定义
+│   ├── Shaders/               # 自定义 Shader（Dissolve.shader + Dissolve.mat）
+│   ├── Effects/                # VFX 特效（FireBallEnhanced.vfx + Slash/）
+│   ├── Tilemaps/              # 瓦片地图（RuleTiles + Sprites + Textures）
+│   ├── Resources/Icons/       # 升级图标（7张AI生成透明PNG）
+│   ├── Lua/                   # Lua 配置文件（upgrades.lua.txt）
+│   ├── XLua/                  # xLua 框架源码
+│   ├── Codely/Fonts/          # Noto Sans SC TMP fallback 字体
 │   ├── Settings/              # URP 渲染配置
-│   ├── Effects/                # VFX 特效（FireBallEnhanced.vfx + FireParticle.png）
+│   ├── Tests/                 # EditMode 测试（8个文件+Tests.asmdef+RunTestsEditor）
+│   ├── TextMesh Pro/         # TMP 资源（微软雅黑+Noto Sans SC）
 ├── Packages/
 └── ProjectSettings/
 ```
@@ -75,13 +89,14 @@ Test/
 ### 游戏玩法
 
 - **WASD / 方向键**：控制角色移动（恒定速度，非物理力驱动）
-- **鼠标左键**：朝鼠标指向方向发射火球攻击敌人
 - **空格**：闪避冲刺，含 0.2 秒无敌帧，2 秒冷却
+- **ESC**：暂停菜单（继续/设置/重新开始/退出）
+- 火球和斩击**自动释放**，无需手动操作（类似吸血鬼幸存者）
 - 角色自动朝向移动方向，行走时留下渐隐脚印
 - 收集经验方块升级，火球消灭敌人也会掉落经验
 - 敌人被消灭后有概率掉落血瓶，拾取可恢复血量
 - 敌人持续从屏幕外刷新，碰到玩家扣血，血量归零则失败
-- 胜利或失败后弹出面板，可选择**重新开始**或**退出游戏**
+- 失败后弹出面板，可选择**重新开始**或**退出游戏**
 
 ### 扩展功能（相对原版教程）
 
@@ -91,14 +106,18 @@ Test/
 | Animator 状态机 | Speed 参数驱动 Idle ↔ Walk ↔ Run 过渡，Action 触发特殊动作 |
 | 恒定速度移动 | 使用 rb.velocity 替代 AddForce，避免加速感；保留 Y 轴速度避免穿模 |
 | 朝向移动方向 | Quaternion.Slerp 平滑转向 |
-| 火球攻击 | 鼠标左键朝鼠标指向方向发射火球，VFX Graph 粒子特效，命中敌人即消灭 |
+| 火球攻击 | 自动定时发射火球（OverlapSphere 索敌，锁定最近敌人），VFX Graph 粒子特效，升级可缩短间隔 |
+| 近战斩击 | 自动半圆范围攻击（Dot 检测前方扇形），SlashEffect 粒子特效，升级可提升伤害/缩短冷却 |
 | 闪避系统 | 空格冲刺，0.2 秒无敌帧，2 秒冷却，UI 冷却图标扇形恢复 |
-| 血量系统 | HealthBar：100 HP，敌人接触持续扣血，归零则失败 |
+| 血量系统 | HealthBar：200 HP，敌人接触扣血（DPS 上限 40/s 防秒杀），归零则失败 |
 | 血瓶掉落 | 敌人死亡 30% 概率掉落血瓶，拾取恢复 30 HP，血量满时不可拾取 |
 | 经验/升级 | ExpBar：收集经验方块 +10 EXP，满 100 升级，每级 maxExp +20 |
-| 升级选择系统 | 升级时暂停游戏，四选三随机：增加最大血量/移动速度/火球数量/吸取范围，含悬浮高亮和图标 |
-| 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 30 个，0.5s 间隔，NavMesh 采样 |
-| 难度递增 | 每10秒：生成更快（-0.02s）、上限更高（+2）、血量更高（+1） |
+| 升级选择系统 | 升级时暂停游戏，五选三随机：最大血量/移动速度/火球数量/吸取范围/火球冷却/斩击伤害/斩击冷却，含图标和悬浮高亮 |
+| xLua 热更 | 升级数据从 Lua 文件加载（upgrades.lua.txt），新增升级只需改 Lua 不改 C# 代码 |
+| 瓦片地图 | 96×96=9216 片瓦片，5 种地形（草地/河流/石子路/河岸/路边），程序化纹理变体 |
+| 设置界面 | 暂停菜单（ESC）+ 音量控制（主音量/音效 Slider + PlayerPrefs 持久化） |
+| 敌人持续生成 | EnemySpawner：屏幕外刷新，最多 500 个，难度递增（100+lv×20） |
+| 难度递增 | 每10秒：生成更快（0.3-lv×0.015）、上限更高（+20）、血量更高（+1） |
 | 敌人血量 | 僵尸初始2血，火球不再一击必杀，头顶显示血条 |
 | 多种敌人类型 | 普通僵尸 / 快速僵尸(HP1,Speed5,运行时设置差异属性) / 坦克僵尸(HP6,Speed1.5,1.5x体型,Zombie_Chubby) / Boss(HP20+,2.5x,Zombie_Ribcage) |
 | 敌人死亡掉落 | 敌人被火球消灭后在死亡位置生成经验方块 |
@@ -107,7 +126,7 @@ Test/
 | 敌人追逐 | 使用 NavMesh 实现敌人自动寻路追踪玩家 |
 | 对象池 | 火球和脚印预创建实例复用，减少 GC 压力 |
 | Layer 碰撞矩阵 | Player(8)/FireBall(9)/PickUp(10)，替代逐对 Physics.IgnoreCollision |
-| Boss 敌人 | 每10秒生成一个 Boss（2.5x体型，HP20+，必掉血瓶，掉3个经验） |
+| Boss 敌人 | 每30秒生成一个 Boss（2.5x体型，HP20+，必掉血瓶，掉3个经验） |
 | 计时器 | 右上角显示游戏存活时间（mm:ss） |
 | 游戏结束面板 | 胜利/失败时弹出 UI 面板，暂停游戏（Time.timeScale = 0） |
 | 重新开始 | 通过 SceneManager 重新加载当前场景 |
@@ -117,7 +136,7 @@ Test/
 | ScriptableObject | 敌人数据驱动配置（.asset 文件），Inspector 调参数不改代码 |
 | 事件解耦 | C# Action 事件系统（OnDashStateChanged/OnPlayerDied），组件间无直接引用 |
 | 命名空间 | 脚本按模块分组（Game.Player/Enemy/Combat/Audio/UI/Systems）+ asmdef 程序集 |
-| EditMode 测试 | 17 个自动化测试用例（ObjectPool/HealthBar/ExpBar/EnemyData） |
+| EditMode 测试 | 22+ 个自动化测试用例（ObjectPool/HealthBar/ExpBar/EnemyData/PlayerCombat/PlayerHealth/PauseMenu） |
 | 中文支持 | TextMeshPro 使用微软雅黑字体资产 |
 
 ### 版本差异说明
@@ -133,6 +152,24 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.6 (2026-08-18)
+
+- 瓦片地图系统：96×96=9216 片瓦片铺满 120×120 地面，5 种地形（草地/河流/石子路/河岸/路边），程序化纹理变体
+- 设置界面：暂停菜单（ESC）+ 音量控制（主音量/音效 Slider + PlayerPrefs 持久化）
+- 升级图标：7 张 AI 生成透明 PNG 图标（Resources/Icons/），UpgradeCard 用 Image + Resources.Load
+- 升级面板鼠标显示：ShowUpgrades 时 Cursor.visible=true，SelectUpgrade 时恢复隐藏
+- EnemyMovement：NavMeshAgent.isOnNavMesh 检查防止 SetDestination 报错
+- Ground 碰撞体修复：瓦片地图替换后丢失地面，重建 120×120 MeshCollider
+- 目录深度清理：删除 TJGenerators/旧 SFX/旧 Sprite/重复目录，temple prefab 迁移到 Quaternius/
+- xLua 热更升级系统：UpgradeSystem 改为 Lua 驱动（upgrades.lua.txt），7 个升级选项数据驱动
+
+#### v1.5 (2026-08-14)
+
+- 火球改为自动定时发射（Physics.OverlapSphere 索敌，间隔 1s 可升级缩短到 0.1s）
+- 近战斩击技能（MeleeCombat.cs 自动半圆范围攻击 + SlashEffect.prefab 粒子特效）
+- 500 敌人数值平衡：maxCount=Min(500,100+lv*20)、受击 DPS 上限 40/s、Boss 间隔 30s
+- 目录清理：删除旧角色模型/重复目录/旧 SFX/旧 Sprite 共 20+ 项
 
 #### v1.4 (2026-08-13)
 

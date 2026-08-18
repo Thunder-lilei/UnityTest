@@ -1,13 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
-using Game.Systems;
 
 namespace Game.Audio
 {
     
+    /// <summary>音频管理器：单例模式，统一管理所有游戏音效播放与火球连击音调递增</summary>
     public class AudioManager : MonoBehaviour
     {
         public static AudioManager Instance { get; private set; }  // 单例实例
@@ -23,6 +20,7 @@ namespace Game.Audio
         public AudioSource healthPotionPickup; // 拾取血瓶音效
         public AudioSource upgradeConfirm;     // 升级选择确认音效
         public AudioSource dash;              // 闪避音效
+        public AudioSource slashAttack;       // 斩击音效
     
         [Header("连击音效设置")]
         [Tooltip("每次连击音调升高幅度")]
@@ -35,14 +33,86 @@ namespace Game.Audio
         private int comboCount;
         private float lastHitTime;
     
+        // 音量设置
+        private const string PREF_MASTER = "Volume_Master";
+        private const string PREF_SFX = "Volume_SFX";
+        private const float MIN_VOLUME = 0.0001f;
+        private float masterVolume = 1f;
+        private float sfxVolume = 1f;
+        private List<AudioSource> sfxSources;
+    
         /// <summary>单例初始化</summary>
         void Awake()
         {
             if (Instance == null)
+            {
                 Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
             else
+            {
                 Destroy(gameObject);
+                return;
+            }
+    
+            // 收集所有 SFX AudioSource 引用
+            sfxSources = new List<AudioSource>
+            {
+                fireballLaunch, fireballHit, enemyDeath, playerHurt,
+                playerDeath, pickupExp, levelUp, gameOver,
+                healthPotionPickup, upgradeConfirm, dash, slashAttack
+            };
+    
+            // 从 PlayerPrefs 加载音量设置
+            masterVolume = PlayerPrefs.GetFloat(PREF_MASTER, 1f);
+            sfxVolume = PlayerPrefs.GetFloat(PREF_SFX, 1f);
+            ApplyVolumes();
         }
+    
+        /// <summary>将当前音量值应用到所有 AudioSource 和 AudioListener</summary>
+        void ApplyVolumes()
+        {
+            AudioListener.volume = masterVolume;
+            if (sfxSources != null)
+            {
+                foreach (var src in sfxSources)
+                {
+                    if (src != null)
+                        src.volume = sfxVolume;
+                }
+            }
+        }
+    
+        /// <summary>设置主音量（全局 AudioListener）</summary>
+        public void SetMasterVolume(float v)
+        {
+            masterVolume = Mathf.Max(MIN_VOLUME, v);
+            AudioListener.volume = masterVolume;
+            PlayerPrefs.SetFloat(PREF_MASTER, masterVolume);
+            PlayerPrefs.Save();
+        }
+    
+        /// <summary>设置音效音量（所有 SFX AudioSource）</summary>
+        public void SetSFXVolume(float v)
+        {
+            sfxVolume = Mathf.Max(MIN_VOLUME, v);
+            if (sfxSources != null)
+            {
+                foreach (var src in sfxSources)
+                {
+                    if (src != null)
+                        src.volume = sfxVolume;
+                }
+            }
+            PlayerPrefs.SetFloat(PREF_SFX, sfxVolume);
+            PlayerPrefs.Save();
+        }
+    
+        /// <summary>获取当前主音量</summary>
+        public float GetMasterVolume() => masterVolume;
+    
+        /// <summary>获取当前音效音量</summary>
+        public float GetSFXVolume() => sfxVolume;
     
         void Update()
         {
@@ -83,6 +153,7 @@ namespace Game.Audio
         public void PlayHealthPotionPickup() { if (healthPotionPickup != null) healthPotionPickup.Play(); }
         public void PlayUpgradeConfirm() { if (upgradeConfirm != null) upgradeConfirm.Play(); }
         public void PlayDash() { if (dash != null) dash.Play(); }
+        public void PlaySlashAttack() { if (slashAttack != null) slashAttack.Play(); }
     }
     
 }

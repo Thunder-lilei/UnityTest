@@ -1,15 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using Game.Audio;
-using Game.Player;
-using Game.Enemy;
-using Game.Combat;
-using Game.UI;
 
 namespace Game.Systems
 {
     
+    /// <summary>旋转装饰物：三轴非均匀旋转，暂停时仍旋转（unscaledDeltaTime）</summary>
     public class Rotator : MonoBehaviour
     {
         /// <summary>三轴非均匀旋转，使用 unscaledDeltaTime 确保暂停时仍旋转</summary>
