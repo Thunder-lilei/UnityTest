@@ -65,7 +65,7 @@ M.upgrades = {
         action = "ReduceSlashInterval",
         value = 0.1,
         icon = "SlashCooldownIcon"
-    }
+    },
     -- 新增加升级只需在此添加一项，例如：
     -- {
     --     id = "dash_cooldown",

@@ -71,16 +71,18 @@ Test/
 │   │   ├── CameraController.cs # 摄像机跟随
 │   │   ├── Rotator.cs          # 收集物旋转动画
 │   │   ├── ETFGRotation.cs    # 斩击特效旋转脚本
+│   │   ├── ShockwaveEffect.cs # 升级冲击波（伤害+击退+扩散特效）
+│   │   ├── ShockwaveVFX.cs    # 冲击波视觉特效（圆环扩散+渐隐）
 │   │   └── Game.asmdef        # 主程序集定义
 │   ├── Shaders/               # 自定义 Shader（Dissolve.shader + Dissolve.mat）
-│   ├── Effects/                # VFX 特效（FireBallEnhanced.vfx + Slash/）
+│   ├── Effects/                # VFX 特效（FireBallEnhanced.vfx + Slash/ + ShockwavePrefab + ShockwaveMesh + ShockwaveMat）
 │   ├── Tilemaps/              # 瓦片地图（RuleTiles + Sprites + Textures）
 │   ├── Resources/Icons/       # 升级图标（7张AI生成透明PNG）
 │   ├── Lua/                   # Lua 配置文件（upgrades.lua.txt）
 │   ├── XLua/                  # xLua 框架源码
 │   ├── Codely/Fonts/          # Noto Sans SC TMP fallback 字体
 │   ├── Settings/              # URP 渲染配置
-│   ├── Tests/                 # EditMode 测试（8个文件+Tests.asmdef+RunTestsEditor）
+│   ├── Tests/                 # EditMode 测试（9个文件+Tests.asmdef+RunTestsEditor）
 │   ├── TextMesh Pro/         # TMP 资源（微软雅黑+Noto Sans SC）
 ├── Packages/
 └── ProjectSettings/
@@ -136,7 +138,8 @@ Test/
 | ScriptableObject | 敌人数据驱动配置（.asset 文件），Inspector 调参数不改代码 |
 | 事件解耦 | C# Action 事件系统（OnDashStateChanged/OnPlayerDied），组件间无直接引用 |
 | 命名空间 | 脚本按模块分组（Game.Player/Enemy/Combat/Audio/UI/Systems）+ asmdef 程序集 |
-| EditMode 测试 | 22+ 个自动化测试用例（ObjectPool/HealthBar/ExpBar/EnemyData/PlayerCombat/PlayerHealth/PauseMenu） |
+| EditMode 测试 | 66 个自动化测试用例（ObjectPool/HealthBar/ExpBar/EnemyData/PlayerCombat/PlayerHealth/PlayerMovement/PauseMenu/MeleeCombat/ShockwaveEffect） |
+| 升级冲击波 | 升级时先播放 1 秒冲击波（蓝色圆环扩散+伤害+NavMeshAgent 击退），播放完毕再弹出升级选择面板 |
 | 中文支持 | TextMeshPro 使用微软雅黑字体资产 |
 
 ### 版本差异说明
@@ -152,6 +155,19 @@ Test/
 | 渲染管线 | URP（默认） | URP（从 Built-in 迁移） |
 
 ### 更新日志
+
+#### v1.8 (2026-08-19)
+
+- 升级冲击波系统：升级时先播放 1 秒蓝色圆环扩散特效（从玩家位置向外扩散），对范围内敌人造成伤害并击退
+- 冲击波时序调整：先触发冲击波（timeScale=1 保证物理/动画正常）→ 等 1 秒播放完毕 → 再暂停弹出升级面板
+- 从 upgrades.lua.txt 移除冲击波伤害/范围两个升级选项（冲击波是升级附带效果，不属于主角个人能力）
+- 击退实现改为 NavMeshAgent 位移（临时禁用 Agent → Lerp 移动 → NavMesh.SamplePosition 确保落点 → 重新启用），兼容无 Rigidbody 的敌人
+- ShockwaveVFX 协程使用 Time.unscaledDeltaTime 防止 timeScale=0 时动画不推进
+- UpgradeSystem 等待方式改为手动 unscaledDeltaTime 计时器 + Mathf.Min(0.1) 限制单帧上限
+- 冲击波材质修复：Hidden/Internal-Colored → URP/Unlit（Hidden shader 不渲染）
+- 冲击波 Mesh 修复：三角形绕序反转使法线朝上 + 顶点 Y 轴加 0.1 厚度避免视锥剔除
+- ShockwavePrefab 重建：正确引用 ShockwaveMesh.asset + ShockwaveMat.mat
+- ShockwaveEffectTests 测试更新：knockbackForce → knockbackDistance + knockbackDuration
 
 #### v1.6 (2026-08-18)
 
