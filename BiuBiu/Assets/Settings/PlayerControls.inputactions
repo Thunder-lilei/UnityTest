@@ -1,0 +1,118 @@
+﻿{
+    "name": "PlayerControls",
+    "maps": [
+        {
+            "name": "Gameplay",
+            "id": "a1b2c3d4-0001-4a01-9a01-000000000001",
+            "actions": [
+                {
+                    "name": "Move",
+                    "type": "Value",
+                    "expectedControlType": "Vector2",
+                    "id": "a1b2c3d4-0010-4a01-9a01-000000000010",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "Fire",
+                    "type": "Button",
+                    "expectedControlType": "Button",
+                    "id": "a1b2c3d4-0020-4a01-9a01-000000000020",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Roll",
+                    "type": "Button",
+                    "expectedControlType": "Button",
+                    "id": "a1b2c3d4-0030-4a01-9a01-000000000030",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "WASD",
+                    "id": "a1b2c3d4-0101-4a01-9a01-000000000101",
+                    "path": "2DVector",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Move",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "up",
+                    "id": "a1b2c3d4-0102-4a01-9a01-000000000102",
+                    "path": "<Keyboard>/w",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Move",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "down",
+                    "id": "a1b2c3d4-0103-4a01-9a01-000000000103",
+                    "path": "<Keyboard>/s",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Move",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "left",
+                    "id": "a1b2c3d4-0104-4a01-9a01-000000000104",
+                    "path": "<Keyboard>/a",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Move",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "right",
+                    "id": "a1b2c3d4-0105-4a01-9a01-000000000105",
+                    "path": "<Keyboard>/d",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Move",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "",
+                    "id": "a1b2c3d4-0201-4a01-9a01-000000000201",
+                    "path": "<Mouse>/leftButton",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Fire",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a1b2c3d4-0301-4a01-9a01-000000000301",
+                    "path": "<Keyboard>/space",
+                    "processors": "",
+                    "interactions": "",
+                    "groups": "",
+                    "action": "Roll",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

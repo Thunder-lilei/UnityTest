@@ -1,0 +1,38 @@
+# ===== 团结/Unity 编辑器生成目录 =====
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+
+# ===== IDE =====
+.vs/
+.idea/
+*.csproj
+*.sln
+*.user
+*.pidb
+*.booproj
+
+# ===== 系统文件 =====
+Thumbs.db
+.DS_Store
+
+# ===== 其他 =====
+*.apk
+*.zip
+
+# ===== 编辑器 AI 扩展（Codely）工具缓存 =====
+.codely-cli/
+.com-unity-codely.json
+CODELY.md
+
+# ===== 团结 AI 生成器（TuanjieAI）历史缓存 =====
+Assets/TJGenerators/
+Assets/TJGenerators.meta
+
+# ===== 资产 QC 预览图（非源码，临时产物） =====
+qc_preview_*.png

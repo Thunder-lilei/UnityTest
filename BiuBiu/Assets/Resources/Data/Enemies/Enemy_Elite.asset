@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c03675835b1354f488dd1a8e3b584445, type: 3}
+  m_Name: Enemy_Elite
+  m_EditorClassIdentifier: 
+  enemyId: elite
+  displayName: "\u7CBE\u82F1\u4E27\u5C38"
+  enemyType: 1
+  prefab: {fileID: 0}
+  baseHealth: 10
+  moveSpeed: 3.0
+  damage: 1
+  expOrbCount: 20
+  bodySize: {x: 1.5, y: 1.5}
+  attackType: 2
+  windupTime: 0.5
+  attackInterval: 1.8
+  attackRange: 2.5
+  sweepAngle: 120
+  projectileSpeed: 0
+  unlockTime: 0
+  chargeWindup: 0.6
+  chargeSpeed: 6
+  chargeDistance: 5
+  chargeCooldown: 5
+  chargePlayerKnockback: 1
+  contactTickInterval: 0
+  ringBulletCount: 0
+  ringBulletSpeed: 0
+  ringCooldown: 0
+  lineBulletCount: 0
+  lineFireInterval: 0
+  lineBulletSpeed: 0
+  lineCooldown: 0
+  bulletRadius: 0.3
