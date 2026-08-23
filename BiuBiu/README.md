@@ -1,5 +1,7 @@
 # BiuBiu
 
+> 本子项目位于 `UnityTest` 仓库的 **`BiuBiu/`** 子目录。Unity 项目根即 `BiuBiu/`（不是 `UnityTest/`），用 Unity 打开 `BiuBiu/` 目录即可。
+
 2D 像素风俯视角**幸存者类街机动作游戏**：大地图波次刷怪、弹弓三段蓄力、每轮自动变强。当前为可玩原型，所有美术为**纯色几何灰盒**（无外部素材依赖），后续接入音频。
 
 ## 技术栈
@@ -42,7 +44,7 @@ BiuBiu/
 
 ## 运行方式
 
-1. 用团结引擎 / Unity 2022.3+ 打开项目根目录
+1. 用团结引擎 / Unity 2022.3+ 打开本子项目目录 `UnityTest/BiuBiu/`（此为 Unity 项目根）
 2. `File → Build Settings` 中场景顺序：`Boot`（索引 0）、`Main`（索引 1）
 3. 点击 Play 即从 `Boot` 引导进入 `Main` 开始游戏
 
