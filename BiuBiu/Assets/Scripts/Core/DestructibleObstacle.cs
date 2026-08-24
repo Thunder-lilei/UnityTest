@@ -5,7 +5,8 @@ namespace BiuBiu.Core
 {
     /// <summary>
     /// 可破坏障碍单元。挂在每个 1×1 障碍单元（俄罗斯方块形状的一个格子）的 collider 上。
-    /// 满蓄力弹丸击中时触发碎墙（销毁整个障碍父物体 + 同色碎片特效）。
+    /// 满蓄力弹丸击中时：原地留下建筑残骸（无碰撞、变暗、可通行），并销毁被命中的这一格；
+    /// 同一形状其余格保留，可被继续击碎（一格一格啃掉障碍）。
     /// 边界墙（大墙）不挂此组件，保持不可破坏。
     /// </summary>
     [RequireComponent(typeof(Collider2D))]
@@ -14,7 +15,7 @@ namespace BiuBiu.Core
         [Tooltip("所属障碍父物体（一个俄罗斯方块形状的根）")]
         public Transform Root;
 
-        /// <summary>该障碍（同一 Root）是否已被破坏，避免重复触发</summary>
+        /// <summary>该单元是否已被破坏，避免重复触发</summary>
         public bool Destroyed { get; private set; }
 
         public void Break()
@@ -22,15 +23,34 @@ namespace BiuBiu.Core
             if (Destroyed) return;
             Destroyed = true;
 
+            Vector3 pos = transform.position;
+
             // 同色像素碎片爆发（墙主色取灰白）
-            BreakBurstManager.SpawnBreakBurst(transform.position, Vector2.up, Color.gray);
+            BreakBurstManager.SpawnBreakBurst(pos, Vector2.up, Color.gray);
 
             // 轻震屏反馈
             CameraTrauma.Instance?.AddTrauma(0.25f);
 
-            // 销毁整个障碍（Root 下所有单元一并消失）
-            if (Root != null) Destroy(Root.gameObject);
-            else Destroy(gameObject);
+            // 在原位置补充建筑残骸：无碰撞、变暗、缩小，可通行（纯装饰）
+            SpawnRubble(pos);
+
+            // 仅销毁被命中的这一格（其余格保留，可继续碎）
+            Destroy(gameObject);
+        }
+
+        /// <summary>生成建筑残骸（俄罗斯方块单元被击碎后留在原地的碎块）</summary>
+        private void SpawnRubble(Vector3 pos)
+        {
+            var rubble = GreyBoxFactory.MakeBox("ObstacleRubble", false, Color.white, Vector2.one * 0.7f);
+            rubble.transform.SetParent(Root != null ? Root : transform.parent, false);
+            rubble.transform.position = pos;
+            var sr = rubble.GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.color = new Color(0.32f, 0.32f, 0.32f); // 暗灰残骸
+                sr.sortingOrder = 1;                       // 压地面、低于完整墙(2)
+            }
+            // 刻意不挂 Collider2D / DestructibleObstacle：残骸可通行、不可再碎
         }
     }
 }
