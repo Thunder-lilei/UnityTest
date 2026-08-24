@@ -671,8 +671,8 @@ MonoBehaviour:
   actions: {fileID: -944628639613478452, guid: 3fda8d052e4953c4e9e9f84aa59a0c10, type: 3}
   playerFlashMaterial: {fileID: 2100000, guid: 69527a06aae97a644b424a0b21fc17a7, type: 2}
   groundVariants:
-  - {fileID: 7256538190645281881, guid: 080fb2b76216cd54ca4cd0f119e4c68e, type: 3}
-  - {fileID: 4581317533123731049, guid: 080fb2b76216cd54ca4cd0f119e4c68e, type: 3}
+  - {fileID: 21300000, guid: 3fd8aa36e222b6642b05cbc91ba18430, type: 3}
+  - {fileID: 21300000, guid: 24421ee6bf5f7ce45874ba0d4d192847, type: 3}
 --- !u!4 &1578989371
 Transform:
   m_ObjectHideFlags: 0

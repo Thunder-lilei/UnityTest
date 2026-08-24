@@ -184,12 +184,21 @@ namespace BiuBiu.Weapons
                 var enemy = col.GetComponentInParent<EnemyBase2D>();
                 if (enemy == null) continue;
 
-                if (shatter)
+                if (shatter && !enemy.IsEliteOrBoss)
                 {
-                    // 二级：击碎敌人，弹丸穿透不消失
+                    // 二级 + 普通敌人：击碎（无视血量直接死亡，留扇形血迹，无尸体），弹丸穿透不消失
                     // 破碎粒子爆发：先于 Shatter 取敌人主色与命中点，避免回池后引用失效
                     BreakBurstManager.SpawnBreakBurst(pos, velocity, enemy.MainColor);
                     enemy.Shatter();
+                    if (CameraTrauma.Instance != null)
+                        CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);
+                }
+                else if (shatter && enemy.IsEliteOrBoss)
+                {
+                    // 二级 + 精英/Boss：不秒杀，走高额伤害（满蓄力也不该一击必杀硬核单位）
+                    // 破碎粒子爆发保留击碎演出，但敌人走正常受伤/死亡路径
+                    BreakBurstManager.SpawnBreakBurst(pos, velocity, enemy.MainColor);
+                    enemy.TakeDamage(damage);
                     if (CameraTrauma.Instance != null)
                         CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);
                 }

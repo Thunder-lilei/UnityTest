@@ -94,6 +94,9 @@ namespace BiuBiu.Enemies
         /// <summary>是否 Boss（击杀标记/演出强度用；Boss 行为本类不处理，仅复用受击/死亡链路）</summary>
         public bool IsBoss => data != null && data.enemyType == EnemyType.Boss;
 
+        /// <summary>是否精英或 Boss（满蓄力不应秒杀的硬核单位）</summary>
+        public bool IsEliteOrBoss => data != null && data.enemyType != EnemyType.Normal;
+
         /// <summary>敌人配置（子类 Boss 专属行为读取参数用）</summary>
         protected EnemyData Data => data;
 
@@ -736,6 +739,9 @@ namespace BiuBiu.Enemies
         /// <summary>死亡：计数+血迹+尸体留存（灰盒压扁渐隐）；精英/Boss 触发 hitstop+击杀演出</summary>
         private void Die()
         {
+            // 同步停用 AI/Think（尸体协程仍独立运行；避免尸体活跃期间占波次计数导致不进下一轮）
+            enabled = false;
+
             // 死前隐藏蓄力扇形框（避免蓄力中被击杀时残留）
             HideWindupArc();
 
