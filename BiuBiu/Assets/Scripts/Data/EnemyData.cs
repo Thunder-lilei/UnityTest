@@ -2,19 +2,20 @@ using UnityEngine;
 
 namespace BiuBiu.Data
 {
-    /// <summary>敌人类型（数值文档 5 章：普通走配额随机刷，精英/Boss 走独立定时器不占配额）</summary>
+    /// <summary>敌人类型（数值文档 5 章：普通走配额随机刷，精英/Boss 按轮次登场）</summary>
     public enum EnemyType
     {
         Normal, // 基础敌人（近战扇形 / 远程直线 / 近战横扫混合，配额内刷）
-        Elite,  // 精英（3:00 起每 180s 一只）
-        Boss    // Boss（5:00 起每 300s 一只，一只比一只强）
+        Elite,  // 精英（第 3 轮起每轮 +1 只；八方向投掷封锁）
+        Boss    // Boss（第 5、10 轮各 1 只；八方向扇形横扫 + 直线冲撞）
     }
 
     /// <summary>普通敌人攻击方式（数值文档 5.1「攻击」列）</summary>
     public enum EnemyAttackType
     {
         RangedLine,  // 远程直线（远程：直线弹丸）
-        ArcSweep     // 范围横扫（近战横扫型 120°/半径 2.0；精英横扫 120°/半径 2.5）
+        ArcSweep,    // 范围横扫（近战横扫型 120°/半径 2.0）
+        OctaThrow    // 八方向投掷（精英专用：朝玩家 1 发 + 米字其余 7 发，投掷距离 = 普通远程 ×2）
     }
 
     /// <summary>
@@ -49,7 +50,7 @@ namespace BiuBiu.Data
         [Tooltip("对玩家伤害（心/次，恒定不成长）")]
         public int damage;
 
-        [Tooltip("体型（tile，碰撞体与渲染缩放基准）：普通 1×1 / 精英 1.5×1.5 / Boss 3×3")]
+        [Tooltip("体型（tile，碰撞体与渲染缩放基准）：普通 1×1 / 精英 2×2（近战 2 倍）/ Boss 4×4（近战 4 倍）；实际由刷怪器按倍率覆盖")]
         public Vector2 bodySize = Vector2.one;
 
         [Header("普通敌人行为（数值文档 5.1；精英复用横扫字段，Boss 忽略本组）")]
@@ -65,30 +66,24 @@ namespace BiuBiu.Data
         [Tooltip("射程（tile）：近战=贴身判定半径 0.6；投掷=开火距离 6.0；横扫=扇形半径 2.0（精英 2.5）")]
         public float attackRange;
 
-        [Tooltip("横扫角度（度，仅 ArcSweep 用）：近战横扫 120 / 精英 120")]
-        public float sweepAngle = 120f;
-
         [Tooltip("弹速（tile/s，仅 RangedLine 用；远程 6.0，其余=0）")]
         public float projectileSpeed;
 
         [Tooltip("类型解锁时间（秒，仅基础敌人用；开局近战/远程/横扫混合=全 0）：精英/Boss=0（走独立定时器）")]
         public float unlockTime;
 
-        [Header("精英冲撞（数值文档 5.2；仅精英使用，普通/Boss 忽略）")]
-        [Tooltip("冲撞前摇（秒）：0.6")]
-        public float chargeWindup;
+        [Header("精英八方向投掷（数值文档 5.2；仅精英使用，普通/Boss 忽略）")]
+        [Tooltip("投掷前摇（秒）：0.6（原地渐红抖动，与横扫同演出）")]
+        public float throwWindup;
 
-        [Tooltip("冲撞速度（tile/s）：6.0")]
-        public float chargeSpeed;
+        [Tooltip("投掷间隔（秒）：1.8（出手后进入冷却）")]
+        public float throwInterval;
 
-        [Tooltip("冲撞距离（tile）：冲 5 tile，路径上接触玩家 1 伤 + 击退玩家 1 tile")]
-        public float chargeDistance;
+        [Tooltip("投掷距离（tile）：= 普通远程 attackRange × GameBalance.EliteThrowRangeScale（默认 12.0）")]
+        public float throwRange;
 
-        [Tooltip("冲撞冷却（秒）：5.0（冷却期间用普通横扫行为）")]
-        public float chargeCooldown;
-
-        [Tooltip("冲撞命中击退玩家的距离（tile）：1.0")]
-        public float chargePlayerKnockback;
+        [Tooltip("投掷弹速（tile/s）：5.0")]
+        public float throwSpeed;
 
         [Header("Boss 技能循环（数值文档 5.3；仅 Boss 使用：环形 → 2s → 直线连射 → 2s → 循环）")]
         [Tooltip("接触伤害结算间隔（秒）：0.5（接触伤害 1 心/次按此频率结算）")]
@@ -117,5 +112,40 @@ namespace BiuBiu.Data
 
         [Tooltip("弹丸碰撞半径（tile）：0.3（环形/直线通用，碰撞墙销毁）")]
         public float bulletRadius = 0.3f;
+
+        [Header("Boss 八方向扇形横扫（数值文档 5.3 重构；仅 Boss 使用）")]
+        [Tooltip("扇形横扫前摇（秒）：0.6")]
+        public float sweepWindup;
+
+        [Tooltip("扇形横扫间隔（秒）：3.0")]
+        public float sweepInterval;
+
+        [Tooltip("扇形横扫半径（tile）：= GameBalance.BossSweepRadius（默认 4.0，近战 2 倍；面积 4 倍）")]
+        public float sweepRadius;
+
+        [Tooltip("扇形横扫角度（度）：= GameBalance.BossSweepAngle（默认 120）")]
+        public float sweepAngle;
+
+        [Tooltip("每次横扫发射的扇形方向数（米字）：= GameBalance.BossSweepDirections（默认 8）")]
+        public int sweepDirections;
+
+        [Tooltip("扇形横扫弹速（tile/s）：3.0")]
+        public float sweepBulletSpeed;
+
+        [Header("Boss 直线冲撞（数值文档 5.3 重构；仅 Boss 使用）")]
+        [Tooltip("冲撞前摇（秒）：0.6")]
+        public float bossChargeWindup;
+
+        [Tooltip("冲撞速度（tile/s）：= GameBalance.BossChargeSpeed（默认 8.0）")]
+        public float bossChargeSpeed;
+
+        [Tooltip("冲撞距离（tile）：= GameBalance.BossChargeDistance（默认 6.0）")]
+        public float bossChargeDistance;
+
+        [Tooltip("冲撞冷却（秒）：6.0")]
+        public float bossChargeCooldown;
+
+        [Tooltip("冲撞命中击退玩家的距离（tile）：1.5")]
+        public float bossChargeKnockback;
     }
 }

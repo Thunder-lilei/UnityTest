@@ -16,11 +16,10 @@ MonoBehaviour:
   displayName: "Boss"
   enemyType: 2
   prefab: {fileID: 0}
-  baseHealth: 30
+  baseHealth: 24
   moveSpeed: 1.6
   damage: 1
-  expOrbCount: 50
-  bodySize: {x: 3, y: 3}
+  bodySize: {x: 4, y: 4}
   attackType: 0
   windupTime: 0
   attackInterval: 0
@@ -28,17 +27,27 @@ MonoBehaviour:
   sweepAngle: 120
   projectileSpeed: 0
   unlockTime: 0
-  chargeWindup: 0
-  chargeSpeed: 0
-  chargeDistance: 0
-  chargeCooldown: 0
-  chargePlayerKnockback: 0
+  throwWindup: 0
+  throwInterval: 0
+  throwRange: 0
+  throwSpeed: 0
   contactTickInterval: 0.5
-  ringBulletCount: 12
-  ringBulletSpeed: 1.5
-  ringCooldown: 6
-  lineBulletCount: 5
-  lineFireInterval: 0.25
-  lineBulletSpeed: 3
-  lineCooldown: 8
+  ringBulletCount: 0
+  ringBulletSpeed: 0
+  ringCooldown: 0
+  lineBulletCount: 0
+  lineFireInterval: 0
+  lineBulletSpeed: 0
+  lineCooldown: 0
   bulletRadius: 0.3
+  sweepWindup: 0.6
+  sweepInterval: 3
+  sweepRadius: 4
+  sweepAngle: 120
+  sweepDirections: 8
+  sweepBulletSpeed: 3
+  bossChargeWindup: 0.6
+  bossChargeSpeed: 8
+  bossChargeDistance: 6
+  bossChargeCooldown: 6
+  bossChargeKnockback: 1.5

@@ -13,26 +13,24 @@ MonoBehaviour:
   m_Name: Enemy_Elite
   m_EditorClassIdentifier: 
   enemyId: elite
-  displayName: "\u7CBE\u82F1\u4E27\u5C38"
+  displayName: "精英丧尸"
   enemyType: 1
   prefab: {fileID: 0}
-  baseHealth: 10
+  baseHealth: 12
   moveSpeed: 3.0
   damage: 1
-  expOrbCount: 20
-  bodySize: {x: 1.5, y: 1.5}
-  attackType: 1
-  windupTime: 1.1
+  bodySize: {x: 2, y: 2}
+  attackType: 2
+  windupTime: 0.6
   attackInterval: 1.8
-  attackRange: 2.5
+  attackRange: 12
   sweepAngle: 120
-  projectileSpeed: 0
+  projectileSpeed: 5
   unlockTime: 0
-  chargeWindup: 0.6
-  chargeSpeed: 6
-  chargeDistance: 5
-  chargeCooldown: 5
-  chargePlayerKnockback: 1
+  throwWindup: 0.6
+  throwInterval: 1.8
+  throwRange: 12
+  throwSpeed: 5
   contactTickInterval: 0
   ringBulletCount: 0
   ringBulletSpeed: 0
@@ -42,3 +40,14 @@ MonoBehaviour:
   lineBulletSpeed: 0
   lineCooldown: 0
   bulletRadius: 0.3
+  sweepWindup: 0
+  sweepInterval: 0
+  sweepRadius: 0
+  sweepAngle: 0
+  sweepDirections: 0
+  sweepBulletSpeed: 0
+  bossChargeWindup: 0
+  bossChargeSpeed: 0
+  bossChargeDistance: 0
+  bossChargeCooldown: 0
+  bossChargeKnockback: 0

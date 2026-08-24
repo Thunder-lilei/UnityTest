@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 namespace BiuBiu.UI
 {
     /// <summary>
-    /// 死亡战报：标题「力战而竭」；字段：坚持了 mm:ss / 打到第 N 轮 / 砍了 X 个；
+    /// 死亡战报：标题「力战而竭」；字段：打到第 N 轮 / 砍了 X 个；
     /// 破纪录项后缀「新纪录！」；按钮：再战 / 回到标题。
     /// 触发链（设计文档死亡流程）：玩家血尽 → 慢动作+镜头聚焦（PlayerController）
     /// → GameBootstrap.EndRun 结算 → 本面板展示 → 再战=重载 Main（重开零成本）/ 回到标题=Boot。
@@ -81,10 +81,8 @@ namespace BiuBiu.UI
             };
             GUI.Label(new Rect(panel.x, panel.y + 24f, panel.width, 56f), "力战而竭", titleStyle);
 
-            // 三行字段透明度补间
+            // 两行字段透明度补间
             float fieldsAlpha = Mathf.Clamp01((t - 0.2f) * 2f); // 延后 20% 出现
-            var stats = GameBootstrap.Instance != null ? GameBootstrap.Instance.RunStats : null;
-            if (stats != null)
             {
                 var lineStyle = new GUIStyle(GUI.skin.label)
                 {
@@ -98,11 +96,7 @@ namespace BiuBiu.UI
                     fontStyle = FontStyle.Bold
                 };
 
-                float y = panel.y + 110f;
-                GUI.Label(new Rect(panel.x, y, panel.width, 34f),
-                    $"坚持了 {stats.ElapsedTimeString}" + (report.TimeNewRecord ? "  新纪录！" : string.Empty),
-                    report.TimeNewRecord ? recordStyle : lineStyle);
-                y += 44f;
+                float y = panel.y + 120f;
                 GUI.Label(new Rect(panel.x, y, panel.width, 34f),
                     $"打到第 {report.Wave} 轮" + (report.WaveNewRecord ? "  新纪录！" : string.Empty),
                     report.WaveNewRecord ? recordStyle : lineStyle);

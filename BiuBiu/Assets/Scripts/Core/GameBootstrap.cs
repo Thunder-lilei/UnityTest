@@ -123,7 +123,7 @@ namespace BiuBiu.Core
         }
 
         /// <summary>
-        /// 开局：重建统计 + 存档登记（总开局 +1）。
+        /// 开局：重建统计。
         /// 再来一局时也会走到这里（重开零成本，无中途存档）。
         /// </summary>
         public void StartRun()
@@ -132,34 +132,31 @@ namespace BiuBiu.Core
             PlayerStats = new PlayerStats(); // 成长属性随每局重建（重开零成本）
             IsRunActive = true;
             ObjectPool.ClearAll(); // 清掉上局回池的闲置实例（活跃实例已随场景卸载销毁）
-            SaveSystem.RegisterRunStart();
-            Debug.Log("[GameBootstrap] 开局：总开局数 " + SaveSystem.TotalRuns);
         }
 
         /// <summary>
         /// 死亡结算（玩家死亡流程末尾调用）。
         /// 停表 → SettleRun 写存档并产出战报。
         /// </summary>
-        /// <returns>战报（三项历史最佳对比，战报 UI 用）</returns>
+        /// <returns>战报（两项历史最佳对比，战报 UI 用）</returns>
         public BattleReport EndRun()
         {
             IsRunActive = false;
             BattleReport report = SaveSystem.SettleRun(RunStats);
-            Debug.Log($"[GameBootstrap] 力战而竭：坚持 {RunStats.ElapsedTimeString} / 打到第 {RunStats.Wave} 轮 / 砍了 {RunStats.Kills} 个"
-                + (report.TimeNewRecord || report.WaveNewRecord || report.KillsNewRecord ? " —— 新纪录！" : ""));
+            Debug.Log($"[GameBootstrap] 力战而竭：打到第 {RunStats.Wave} 轮 / 砍了 {RunStats.Kills} 个"
+                + (report.WaveNewRecord || report.KillsNewRecord ? " —— 新纪录！" : ""));
             return report;
         }
 
         // ==================== 事件汇总（各系统 → 统计） ====================
 
         /// <summary>
-        /// 敌人击杀通知（EnemyBase2D 死亡时调用）：计数 + Boss 标记。
+        /// 敌人击杀通知（EnemyBase2D 死亡时调用）：计数。
         /// </summary>
         public void NotifyEnemyKilled(bool isBoss)
         {
             if (RunStats == null) return;
             RunStats.Kills++;
-            if (isBoss) RunStats.BossKilled = true;
         }
     }
 }

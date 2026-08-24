@@ -10,11 +10,11 @@ namespace BiuBiu.Enemies
 {
     /// <summary>
     /// 正式敌人基类（数值文档 5.1/5.2；EnemyData SO 数据驱动，替换 M0 灰盒 GreyBoxZombie）。
-    /// 覆盖普通敌人三种攻击方式 + 精英冲撞（Boss 行为差异大，见 EnemyBoss2D）：
+    /// 覆盖普通敌人三种攻击方式 + 精英八方向投掷（Boss 行为差异大，见 EnemyBoss2D）：
     /// - 近战单点（近战扇形型）：贴身 → 前摇渐红 → 命中判定 → 冷却；
     /// - 远程直线（远程）：进入射程 → 前摇 → 发射直线弹丸（Projectile2D）→ 冷却；
-    /// - 范围横扫（近战横扫型/精英）：进入半径 → 前摇 → 朝玩家方向扇形判定 → 冷却；
-    /// - 精英冲撞：冷却转好 → 前摇 0.6s → 6.0 tile/s 直线冲 5 tile（路径接触 1 伤+击退玩家）→ 冷却 5s。
+    /// - 范围横扫（近战横扫型）：进入半径 → 前摇 → 朝玩家方向扇形判定 → 冷却；
+    /// - 八方向投掷（精英专用）：进入投掷距离 → 前摇 0.6s → 朝玩家 1 发 + 米字其余 7 发（距离 = 普通远程 ×2）。
     /// 物理方案：Rigidbody2D Dynamic + CircleCollider2D（敌人间物理分离防堆叠）；
     /// 玩家无碰撞体（代码距离判定伤害，可穿敌群靠翻滚无敌帧脱身）。
     /// 通用反馈：受击闪白（HitFlash）+ 击退（IKnockbackable）+ 头顶血条；
@@ -139,7 +139,7 @@ namespace BiuBiu.Enemies
             state = State.Seek;
             stateTimer = 0f;
             knockTimer = 0f;
-            chargeCooldownTimer = data.chargeCooldown * 0.5f; // 开局半冷却后再考虑冲撞
+            chargeCooldownTimer = data.bossChargeCooldown * 0.5f; // 开局半冷却后再考虑冲撞
             chargeRemaining = 0f;
             chargeHitPlayer = false;
             potionThresholdsFired = 0;
@@ -192,13 +192,22 @@ namespace BiuBiu.Enemies
             UpdateHealthBar();
         }
 
+        /// <summary>增加最大血量并同步当前血量（第 8 轮起普通敌人血量线性偏陡加成用）</summary>
+        public void AddMaxHealth(int n)
+        {
+            if (n <= 0) return;
+            maxHealth += n;
+            health += n;
+            UpdateHealthBar();
+        }
+
         /// <summary>灰盒配色（按敌人类型；素材版被 prefab 视觉替代）</summary>
         private static Color GreyColor(EnemyType type)
         {
             switch (type)
             {
                 case EnemyType.Elite: return new Color(0.6f, 0.2f, 0.8f);   // 紫
-                case EnemyType.Boss: return new Color(0.25f, 0.1f, 0.1f);  // 暗红黑
+                case EnemyType.Boss: return new Color(1.0f, 0.85f, 0.2f);  // 金
                 default: return new Color(0.4f, 0.55f, 0.35f);             // 敌人绿
             }
         }
@@ -287,18 +296,9 @@ namespace BiuBiu.Enemies
             }
         }
 
-        /// <summary>追踪：朝玩家移动；进入攻击条件转前摇（精英优先冲撞）</summary>
+        /// <summary>追踪：朝玩家移动；进入攻击条件转前摇（精英走八方向投掷分支）</summary>
         private void SeekUpdate(PlayerController player, Vector2 toPlayer, float dist)
         {
-            // ---- 精英：冲撞冷却转好且玩家在冲撞里程内 → 冲撞前摇 ----
-            if (data.enemyType == EnemyType.Elite && chargeCooldownTimer <= 0f
-                && dist <= data.chargeDistance + 2f && dist > data.attackRange)
-            {
-                state = State.ChargeWindup;
-                stateTimer = data.chargeWindup;
-                return;
-            }
-
             // ---- 进入射程 → 攻击前摇 ----
             // 触发距离比实际攻击范围大，让敌人走到近身才出手
             if (dist <= data.attackRange)
@@ -335,30 +335,22 @@ namespace BiuBiu.Enemies
             // 前摇结束：隐藏指示器
             HideWindupArc();
 
-            // 前摇结束：出手（近战直接执行，命中判定在 ExecuteAttack 内）
-            bool inRange = true;
-            if (data.attackType == EnemyAttackType.RangedLine || inRange)
+            // 前摇结束：出手
+            if (data.attackType == EnemyAttackType.RangedLine)
             {
-                if (data.attackType == EnemyAttackType.RangedLine)
-                {
-                    state = State.RangedCharge;
-                    stateTimer = 0.6f;
-                    chargeDir = ((Vector2)player.transform.position - (Vector2)transform.position).normalized;
-                    pendingProjectile = null;
-                    // 蓄力中隐藏常驻球；球位置已由 Initialize 固定在局部中心偏前（含 X 补偿），
-                    // 不随 chargeDir 重摆，避免发射复原后偏移累积
-                    if (carryBall != null) carryBall.gameObject.SetActive(false);
-                }
-                else
-                {
-                    ExecuteAttack(player);
-                    state = State.Cooldown;
-                    stateTimer = data.attackInterval;
-                }
+                // 远程直线：弹弓蓄力子状态
+                state = State.RangedCharge;
+                stateTimer = 0.6f;
+                chargeDir = ((Vector2)player.transform.position - (Vector2)transform.position).normalized;
+                pendingProjectile = null;
+                if (carryBall != null) carryBall.gameObject.SetActive(false);
             }
             else
             {
-                state = State.Seek;
+                // 近战横扫 / 精英八方向投掷：直接出手
+                ExecuteAttack(player);
+                state = State.Cooldown;
+                stateTimer = data.attackInterval;
             }
             sr.color = baseColor;
             HideWindupArc();
@@ -384,6 +376,10 @@ namespace BiuBiu.Enemies
                     FireProjectile(toPlayer.normalized);
                     break;
 
+                case EnemyAttackType.OctaThrow:
+                    FireOctaThrow(player);
+                    break;
+
                 case EnemyAttackType.ArcSweep:
                     if (distToPlayer <= hitRange
                         && Vector2.Angle(aimDir, toPlayer) <= hitArc)
@@ -392,6 +388,38 @@ namespace BiuBiu.Enemies
                     }
                     break;
             }
+        }
+
+        /// <summary>八方向投掷（精英专用）：朝玩家 1 发 + 米字(0/45/.../315)其余 7 发，形成封锁网</summary>
+        private void FireOctaThrow(PlayerController player)
+        {
+            Vector2 toPlayer = (Vector2)player.transform.position - (Vector2)transform.position;
+            float playerAngle = Mathf.Atan2(toPlayer.y, toPlayer.x) * Mathf.Rad2Deg;
+
+            // 米字 8 方向（每 45°）
+            var dirs = new System.Collections.Generic.List<float>(8);
+            for (int i = 0; i < 8; i++) dirs.Add(i * 45f);
+
+            // 朝玩家那发（独立 1 发）
+            FireThrow(toPlayer.normalized);
+
+            // 米字其余 7 发（若与朝玩家方向最近的那个重合则去重，避免浪费）
+            float nearest = Mathf.Round(playerAngle / 45f) * 45f;
+            foreach (float a in dirs)
+            {
+                if (Mathf.Abs(Mathf.DeltaAngle(a, nearest)) < 1f) continue; // 去重朝玩家方向
+                float rad = a * Mathf.Deg2Rad;
+                FireThrow(new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)));
+            }
+        }
+
+        /// <summary>发射一枚八方向投掷弹丸（精英；朝某方向，速度/颜色同远程敌弹）</summary>
+        private void FireThrow(Vector2 dir)
+        {
+            var go = ObjectPool.Get(Projectile2D.GreyTemplate,
+                transform.position, Quaternion.identity);
+            go.GetComponent<Projectile2D>().Launch(dir, data.throwSpeed,
+                data.bulletRadius, new Color(1f, 0.6f, 0.15f)); // 橙红敌弹
         }
 
         /// <summary>发射一枚直线弹丸（远程；ObjectPool 池化）</summary>
@@ -407,14 +435,14 @@ namespace BiuBiu.Enemies
         private void ChargeWindupUpdate(PlayerController player)
         {
             stateTimer -= Time.deltaTime;
-            float progress = 1f - Mathf.Clamp01(stateTimer / data.chargeWindup);
+            float progress = 1f - Mathf.Clamp01(stateTimer / data.bossChargeWindup);
             sr.color = Color.Lerp(baseColor, Color.red, progress);
 
             if (stateTimer > 0f) return;
 
             // 锁定冲刺方向（前摇期间走位可骗方向）
             chargeDir = ((Vector2)player.transform.position - (Vector2)transform.position).normalized;
-            chargeRemaining = data.chargeDistance;
+            chargeRemaining = data.bossChargeDistance;
             chargeHitPlayer = false;
             state = State.Charging;
             sr.color = baseColor;
@@ -423,8 +451,8 @@ namespace BiuBiu.Enemies
         /// <summary>精英冲撞中：直线冲刺，路径接触玩家 1 伤+击退；冲完进冷却</summary>
         private void ChargingUpdate(PlayerController player)
         {
-            float step = data.chargeSpeed * Time.deltaTime;
-            rb.velocity = chargeDir * data.chargeSpeed;
+            float step = data.bossChargeSpeed * Time.deltaTime;
+            rb.velocity = chargeDir * data.bossChargeSpeed;
             chargeRemaining -= step;
 
             // 冲撞路径命中判定（一次冲撞只伤一次）
@@ -438,14 +466,14 @@ namespace BiuBiu.Enemies
                     player.TakeDamage(data.damage);
                     // 击退玩家 1 tile（数值文档 5.2 冲撞；M1-8 玩家改造接入受击击退后生效）
                     var knockable = player.GetComponent<IKnockbackable>();
-                    if (knockable != null) knockable.Knockback(chargeDir, data.chargePlayerKnockback);
+                    if (knockable != null) knockable.Knockback(chargeDir, data.bossChargeKnockback);
                 }
             }
 
             if (chargeRemaining <= 0f)
             {
                 rb.velocity = Vector2.zero;
-                chargeCooldownTimer = data.chargeCooldown;
+                chargeCooldownTimer = data.bossChargeCooldown;
                 state = State.Cooldown;
                 stateTimer = 0.5f; // 冲撞后短暂僵直
             }
@@ -720,7 +748,7 @@ namespace BiuBiu.Enemies
             // 死亡音效（仅普通/精英/Boss 正常死亡；击碎走 Shatter 专属音，不播此音）
             AudioManager.Play("enemy_death");
 
-            // 击杀计数与 Boss 标记（成就「蛛网突围」数据源）
+            // 击杀计数（累计击杀数，战报/历史最佳数据源）
             GameBootstrap.Instance?.NotifyEnemyKilled(IsBoss);
 
             // 地面血迹×3（增加血迹量）

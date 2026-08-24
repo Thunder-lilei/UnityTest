@@ -5,9 +5,10 @@ using UnityEngine.SceneManagement;
 namespace BiuBiu.UI
 {
     /// <summary>
-    /// ESC 暂停菜单：标题「喘口气」；按钮：继续 / 重新开始 / 回到标题 / 设置。
+    /// ESC 暂停菜单：标题「喘口气」；按钮：继续 / 重新开始 / 回到标题 / 设置 / 统计记录。
     /// timeScale=0 全局暂停；互斥：死亡战报打开时 ESC 无效。
-    /// 设置面板（键位/音量/震屏/慢动作/开发者模式）已接入（SettingsPanel）。
+    /// 设置面板（键位/音量/震屏/慢动作/开发者模式）已接入（SettingsPanel）；
+    /// 统计记录子面板展示历史最佳（最大轮次 / 最多击杀，来源 SaveSystem）。
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
@@ -23,6 +24,9 @@ namespace BiuBiu.UI
 
         /// <summary>是否暂停（外部输入过滤用：武器/翻滚在暂停中不响应）</summary>
         public static bool IsPaused => paused;
+
+        /// <summary>统计记录子面板是否展示（ESC 暂停菜单内进入查看历史最佳）</summary>
+        private static bool showStats;
 
         private void Update()
         {
@@ -108,6 +112,42 @@ namespace BiuBiu.UI
                     SettingsPanel.Show();
                 }
                 GUI.enabled = true;
+
+                // 统计记录按钮（查看历史最佳：最大轮次 / 最多击杀）
+                if (GUI.Button(new Rect(bx, panel.y + 390f, bw, bh), "统计记录", btnStyle))
+                {
+                    showStats = true;
+                }
+            }
+
+            // ---- 统计记录子面板（ESC 暂停菜单内，查看两项历史最佳） ----
+            if (showStats)
+            {
+                Color prev2 = GUI.color;
+                GUI.color = new Color(0f, 0f, 0f, 0.7f);
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+                GUI.color = prev2;
+
+                float spW = 420f, spH = 280f;
+                Rect sp = new Rect((Screen.width - spW) * 0.5f, (Screen.height - spH) * 0.5f, spW, spH);
+                GUI.Box(sp, string.Empty);
+
+                var spTitle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 32, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter
+                };
+                GUI.Label(new Rect(sp.x, sp.y + 20f, sp.width, 44f), "统计记录", spTitle);
+
+                var spLabel = new GUIStyle(GUI.skin.label) { fontSize = 24, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(sp.x, sp.y + 100f, sp.width, 36f),
+                    $"最大轮次：{SaveSystem.BestWave}", spLabel);
+                GUI.Label(new Rect(sp.x, sp.y + 150f, sp.width, 36f),
+                    $"最多击杀：{SaveSystem.BestKills}", spLabel);
+
+                if (GUI.Button(new Rect(sp.x + spW * 0.5f - 70f, sp.y + spH - 70f, 140f, 44f), "返回", btnStyle))
+                {
+                    showStats = false;
+                }
             }
         }
 

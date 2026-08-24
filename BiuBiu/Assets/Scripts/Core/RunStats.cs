@@ -3,8 +3,7 @@ using UnityEngine;
 namespace BiuBiu.Core
 {
     /// <summary>
-    /// 单局统计（死亡战报数据源：坚持了 mm:ss / 打到第 N 轮 / 砍了 X 个；
-    /// 成就判定数据源：轮次 5 / 存活 10:00 / 击杀 500 / 击杀 Boss）。
+    /// 单局统计（死亡战报数据源：打到第 N 轮 / 砍了 X 个）。
     /// 纯 C# 类，由 GameBootstrap 持有并每局重建（局开始=新实例，天然归零）。
     /// 注意：Play 中脚本热重载会清空普通 C# 对象引用——GameBootstrap 入口需判 null 自愈重建（工程纪律）。
     /// </summary>
@@ -18,9 +17,6 @@ namespace BiuBiu.Core
 
         /// <summary>本局达到的最高轮次（HUD「第 N 轮」与战报「打到第 N 轮」共用；EnemySpawner2D 推进）</summary>
         public int Wave = 1;
-
-        /// <summary>本局是否击杀过任一只 Boss（成就「蛛网突围」判定）</summary>
-        public bool BossKilled;
 
         /// <summary>当前难度级 L = floor(局时 / 30)（数值文档 6.1，敌人血量成长共用输入）</summary>
         public int DifficultyLevel => GameBalance.DifficultyLevel(ElapsedSeconds);

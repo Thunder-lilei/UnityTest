@@ -8,11 +8,12 @@ using UnityEngine;
 namespace BiuBiu.Enemies
 {
     /// <summary>
-    /// 刷怪器（波次制：1→2→4→8→16...，击杀完当前波次全部敌人才开下一轮）。
+    /// 刷怪器（波次制：1→2→4→8→16→32→64，第 8 轮起封顶 64 不增，转血量/精英占比制造难点；数值文档 5 章）。
     /// - 生成位置：屏幕外环形区；
-    /// - 每轮数量 = 2^(轮次-1)，类型从已解锁敌人中随机；
-    /// - 精英：3:00 首只，此后每 180s 一只（独立计时不占波次配额）；
-    /// - Boss：5:00 首只，此后每 300s 一只（第 n 只血量 30×n）；
+    /// - 每轮普通数量 = min(2^(轮次-1), 64)，第 5/10 轮(Boss 轮)减半让 Boss 成焦点；
+    /// - 精英：第 3 轮起每轮 +1（第 3~7 轮独立额外，第 8 轮起封顶 5 并改「波次内精英化」不增总量）；
+    /// - Boss：第 5、10 轮各 1 只（bossIndex 1/2，血量 24×n）；
+    /// - 精英/Boss 计入本波活跃列表，清场(普通+精英+Boss 全灭)才开下一轮；
     /// - EnemyData SO 数据驱动；配置为空时 Resources 兜底加载。
     /// </summary>
     public class EnemySpawner2D : MonoBehaviour
@@ -49,12 +50,42 @@ namespace BiuBiu.Enemies
         // ---- 运行状态 ----
         private int waveNumber;                          // 当前波次（1 起）
         private int waveSpawnCount;                      // 本轮还需生成的数量
-        private float waveSpawnTimer;                     // 本轮生成间隔计时
-        private readonly List<GameObject> activeNormals = new List<GameObject>(); // 活跃普通敌人
-        private float nextEliteTime;                     // 下一只精英生成时刻
-        private float nextBossTime;                      // 下一只 Boss 生成时刻
-        private int bossCount;                           // 已生成 Boss 数（第 n 只血量 30×n）
         private float waveDelayTimer;                    // 波次间隔等待计时（>0=等待中）
+        private readonly List<GameObject> activeEnemies = new List<GameObject>(); // 活跃敌人（普通+精英+Boss，统一计数）
+        private readonly HashSet<int> bossSpawnedWaves = new HashSet<int>(); // 已出 Boss 的轮次（防重复）
+        private int bossCount;                           // 已生成 Boss 数（第 n 只血量 24×n）
+
+        /// <summary>本波普通槽位数（封顶 64；Boss 轮减半）</summary>
+        private int NormalCountForWave(int wave)
+        {
+            int baseCount = wave < GameBalance.WaveCapWave
+                ? Mathf.RoundToInt(Mathf.Pow(2f, wave - 1))
+                : GameBalance.NormalCountCap;
+            if (IsBossWave(wave)) baseCount = Mathf.RoundToInt(baseCount * GameBalance.BossWaveNormalScale);
+            return baseCount;
+        }
+
+        /// <summary>是否 Boss 轮（5/10）</summary>
+        private static bool IsBossWave(int wave)
+        {
+            foreach (int w in GameBalance.BossWaves) if (w == wave) return true;
+            return false;
+        }
+
+        /// <summary>本论独立额外精英数（第 3~7 轮每轮 +1，第 8 轮起封顶不再额外）</summary>
+        private int EliteExtraForWave(int wave)
+        {
+            if (wave < GameBalance.EliteStartWave) return 0;
+            if (wave >= GameBalance.WaveCapWave) return 0; // 第 8 轮起并入「波次内精英化」
+            return Mathf.Min(wave - GameBalance.EliteStartWave + 1, GameBalance.EliteCountCap);
+        }
+
+        /// <summary>本论「波次内精英化」数量（第 8 轮起：普通槽位中改生成精英，不增总量）</summary>
+        private int EliteInWaveForWave(int wave)
+        {
+            if (wave < GameBalance.WaveCapWave) return 0;
+            return Mathf.Min(wave - (GameBalance.WaveCapWave - 1), GameBalance.EliteInWaveMax);
+        }
 
         // ---- 灰盒模板（EnemyData.prefab 为空时兜底；静态缓存跨实例复用） ----
         private static GameObject greyNormalTemplate;
@@ -77,15 +108,10 @@ namespace BiuBiu.Enemies
             if (eliteData == null) eliteData = Resources.Load<EnemyData>(ResPath + "Enemy_Elite");
             if (bossData == null) bossData = Resources.Load<EnemyData>(ResPath + "Enemy_Boss");
 
-            // 独立定时器初值（数值文档 5.2/5.3：精英 3:00 首只、Boss 5:00 首只）
-            nextEliteTime = GameBalance.EliteFirstSpawnTime;
-            nextBossTime = GameBalance.BossFirstSpawnTime;
-
-            // 初始化第一波（1 只，延迟 2s 等开场消息消失后刷出）
+            // 初始化第一波（延迟 2s 等开场消息消失后刷出）
             waveNumber = 1;
             CurrentWave = 1;
-            waveSpawnCount = 1;
-            waveSpawnTimer = 0f;
+            waveSpawnCount = NormalCountForWave(1);
             waveDelayTimer = 2f; // 开场消息显示 2s 后才开始刷怪
             // 开场消息：缓存而非直接事件触发（Start 可能早于 GameHud 订阅，直接 Invoke 会丢失）
             PendingOpeningMessage = "记得攻击  记得闪避  好了 上吧！";
@@ -110,39 +136,20 @@ namespace BiuBiu.Enemies
             }
             else if (waveSpawnCount > 0)
             {
-                // 一次性全部刷出本轮所有敌人
-                while (waveSpawnCount > 0)
-                {
-                    SpawnNormal(elapsed, level);
-                    waveSpawnCount--;
-                }
+                // 一次性全部刷出本轮所有敌人（普通 + 精英化 + 独立精英 + 本论 Boss）
+                SpawnWave(elapsed, level);
+                waveSpawnCount = 0;
             }
-            else if (activeNormals.Count == 0)
+            else if (activeEnemies.Count == 0)
             {
-                // 本轮全部生成且全部被击杀 → 属性微增 → 进入下一轮（翻倍）
+                // 本轮全部生成且全部被击杀（普通+精英+Boss 全灭）→ 属性微增 → 进入下一轮
                 waveNumber++;
                 CurrentWave = waveNumber;
                 if (stats != null) stats.Wave = waveNumber; // 战报「打到第 N 轮」数据源
-                waveSpawnCount = Mathf.RoundToInt(Mathf.Pow(2f, waveNumber - 1)); // 1→2→4→8→16...
+                waveSpawnCount = NormalCountForWave(waveNumber); // 封顶/减半已在内部处理
                 waveDelayTimer = 1f; // 短暂间隔
                 // 每轮结束属性微增+回满血+屏幕提示
                 ApplyRoundBonus();
-            }
-
-            // ---- 精英独立定时（不占波次配额） ----
-            if (eliteData != null && elapsed >= nextEliteTime)
-            {
-                nextEliteTime += GameBalance.EliteSpawnInterval;
-                SpawnElite(level);
-                OnEnemyIntro?.Invoke("精英来了！");
-            }
-
-            // ---- Boss 独立定时（不占波次配额；每只都提示——一只比一只强） ----
-            if (bossData != null && elapsed >= nextBossTime)
-            {
-                nextBossTime += GameBalance.BossSpawnInterval;
-                SpawnBoss();
-                OnEnemyIntro?.Invoke("Boss 登场！！");
             }
         }
 
@@ -169,7 +176,48 @@ namespace BiuBiu.Enemies
                 SpeechBubbleManager.Say(player.transform, SpeakerType.Player, SpeechEvent.RoundUp);
         }
 
-        /// <summary>生成一只普通敌人（已解锁类型中随机）</summary>
+        /// <summary>
+        /// 生成本轮全部敌人：普通槽位（含第 8 轮起波次内精英化）+ 第 3~7 轮独立额外精英 + 本论 Boss（若 Boss 轮）。
+        /// 精英/Boss 计入 activeEnemies 统一计数（清场才进下一轮）。
+        /// </summary>
+        private void SpawnWave(float elapsed, int level)
+        {
+            int wave = waveNumber;
+            int total = NormalCountForWave(wave);          // 普通槽位上限（Boss 轮减半）
+            int eliteInWave = EliteInWaveForWave(wave);    // 第 8 轮起波次内精英化数
+            int eliteExtra = EliteExtraForWave(wave);      // 第 3~7 轮独立额外精英数
+
+            // ---- 普通 + 波次内精英化 ----
+            for (int i = 0; i < total; i++)
+            {
+                if (i < eliteInWave)
+                {
+                    SpawnEnemy(eliteData, level, GreyNormalTemplate); // 精英化（占普通槽位，不增总量）
+                }
+                else
+                {
+                    SpawnNormal(elapsed, level); // 普通随机类型
+                }
+            }
+
+            // ---- 第 3~7 轮独立额外精英（不占普通槽位） ----
+            for (int i = 0; i < eliteExtra; i++)
+            {
+                SpawnEnemy(eliteData, level, GreyNormalTemplate);
+            }
+            if (eliteExtra > 0) OnEnemyIntro?.Invoke("精英来了！");
+
+            // ---- 本论 Boss（5/10 轮各 1 只） ----
+            if (IsBossWave(wave) && !bossSpawnedWaves.Contains(wave))
+            {
+                bossSpawnedWaves.Add(wave);
+                bossCount++;
+                SpawnEnemy(bossData, level, GreyBossTemplate, bossCount);
+                OnEnemyIntro?.Invoke("Boss 登场！！");
+            }
+        }
+
+        /// <summary>生成一只普通敌人（已解锁类型中等权随机）</summary>
         private void SpawnNormal(float elapsed, int level)
         {
             if (normalEnemies == null || normalEnemies.Length == 0) return;
@@ -181,33 +229,30 @@ namespace BiuBiu.Enemies
             {
                 if (e == null || elapsed < e.unlockTime) continue;
                 unlocked++;
-                // 等权随机：蓄水池抽样（单遍扫描）
-                if (UnityEngine.Random.value < 1f / unlocked) picked = e;
+                if (UnityEngine.Random.value < 1f / unlocked) picked = e; // 蓄水池抽样
             }
             if (picked == null) return;
 
-            // 三类基础敌人开局混合出现（数值文档 v2.4：解锁表归零），新敌登场提示不再触发
-
-            var go = SpawnOne(picked, GreyNormalTemplate);
-            go.GetComponent<EnemyBase2D>().Initialize(picked, level);
-            activeNormals.Add(go);
+            SpawnEnemy(picked, level, GreyNormalTemplate);
         }
 
-        /// <summary>生成精英（独立通道；血量成长公式更陡）</summary>
-        private void SpawnElite(int level)
+        /// <summary>生成一名敌人并加入统一活跃列表（普通/精英通用；普通含第 8 轮后血量加成）</summary>
+        private void SpawnEnemy(EnemyData data, int level, GameObject greyTemplate, int bossIndex = 0)
         {
-            var go = SpawnOne(eliteData, GreyNormalTemplate);
-            go.GetComponent<EnemyBase2D>().Initialize(eliteData, level);
-            // 精英不计入普通上限（数值文档 6.1）
-        }
-
-        /// <summary>生成 Boss（第 n 只血量 30×n）</summary>
-        private void SpawnBoss()
-        {
-            bossCount++;
-            var go = SpawnOne(bossData, GreyBossTemplate);
-            go.GetComponent<EnemyBoss2D>().InitializeBoss(bossData, bossCount);
-            // Boss 不计入普通上限
+            var go = SpawnOne(data, greyTemplate);
+            var enemy = go.GetComponent<EnemyBase2D>();
+            if (bossIndex > 0)
+            {
+                go.GetComponent<EnemyBoss2D>().InitializeBoss(data, bossIndex);
+            }
+            else
+            {
+                enemy.Initialize(data, level);
+                // 第 8 轮起普通血量线性偏陡加成（约每轮 +50% 基础血）
+                int bonus = GameBalance.NormalHealthBonusFromWave(waveNumber, data.baseHealth);
+                if (bonus > 0) enemy.AddMaxHealth(bonus);
+            }
+            activeEnemies.Add(go);
         }
 
         /// <summary>生成通用：prefab 优先（素材版），空则灰盒模板；屏幕外取点 + 池化</summary>
@@ -223,9 +268,25 @@ namespace BiuBiu.Enemies
         /// <summary>清理列表中已回池/已死亡的实例（尸体停留至全局上限后渐隐回池，不计入活跃计数）</summary>
         private void CleanInactive()
         {
-            activeNormals.RemoveAll(e =>
+            activeEnemies.RemoveAll(e =>
                 e == null || !e.activeInHierarchy || !e.GetComponent<EnemyBase2D>().enabled);
         }
+
+        /// <summary>HUD 读取：当前轮次剩余未击杀敌人数量（普通 + 精英 + Boss，清场才进下一轮）</summary>
+        public static int RemainingEnemies
+        {
+            get
+            {
+                int n = 0;
+                foreach (var e in _instance.activeEnemies)
+                    if (e != null && e.activeInHierarchy && e.GetComponent<EnemyBase2D>().enabled) n++;
+                return n;
+            }
+        }
+
+        /// <summary>单例引用（供 RemainingEnemies 静态读取活跃列表）</summary>
+        private static EnemySpawner2D _instance;
+        private void Awake() { _instance = this; }
 
         /// <summary>
         /// 屏幕外环形区取生成点（视口四角 → 世界矩形 → 外扩边距 → 随机选边），

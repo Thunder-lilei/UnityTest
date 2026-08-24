@@ -18,7 +18,7 @@
 - `Assets/Scripts/{Core,Player,Weapons,Enemies,Drops,UI,Data,Editor}/` — 按模块划分；项目自身无 asmdef
 - `Assets/UI/` — 预留 UI 资产（当前空，灰盒 HUD 为程序化/OnGUI 绘制）
 - `Assets/Resources/Data/Enemies/` — EnemyData SO 实例（Resources 兜底加载）
-- `Assets/Audio/` — 预留音频资产（待接入，空目录）
+- `Assets/Resources/Audio/` — 音频资产（运行时 `AudioManager` 按名 `Resources.Load` 加载；蓄力/发射/闪避/受击/击碎/死亡/撞墙/碎砖等事件音）
 - `Docs/`（中文策划文档：设计/开发/数值）
 
 ## 关键架构约定

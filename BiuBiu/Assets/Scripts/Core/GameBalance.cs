@@ -73,17 +73,53 @@ namespace BiuBiu.Core
         /// <summary>敌人对玩家伤害恒定（心/次，次数制原则不做成长）</summary>
         public const int EnemyDamageToPlayer = 1;
 
-        /// <summary>精英登场间隔（秒；3:00 首只，此后每 180s 一只，独立计时不占普通配额）</summary>
-        public const float EliteSpawnInterval = 180f;
+        // ==================== 第 5.x 章 按轮次登场规则（v3.7 重构：登场绑定波次而非真实时间） ====================
 
-        /// <summary>精英首次登场时间（秒）</summary>
-        public const float EliteFirstSpawnTime = 180f;
+        /// <summary>精英起始登场轮次：第 3 轮起，每轮额外 +1 只精英（独立生成，不占普通配额）</summary>
+        public const int EliteStartWave = 3;
 
-        /// <summary>Boss 登场间隔（秒；5:00 首只，此后每 300s 一只，一只比一只强）</summary>
-        public const float BossSpawnInterval = 300f;
+        /// <summary>精英每轮递增数量（第 EliteStartWave 轮起每轮 +1）</summary>
+        public const int ElitePerWaveIncrement = 1;
 
-        /// <summary>Boss 首次登场时间（秒）</summary>
-        public const float BossFirstSpawnTime = 300f;
+        /// <summary>第 8 轮起普通数量封顶（不再翻倍，转由血量/精英占比制造难点）</summary>
+        public const int WaveCapWave = 8;
+
+        /// <summary>普通敌人数量封顶值（第 WaveCapWave 轮起恒定；= 第 7 轮波次量 2^6 = 64）</summary>
+        public const int NormalCountCap = 64;
+
+        /// <summary>第 8 轮起精英数量封顶（不再无限 +1，转由波次内"精英化"提升占比）</summary>
+        public const int EliteCountCap = 5;
+
+        /// <summary>第 8 轮起波次内"精英化"数量：每轮 min(波次-7, 上限) 个普通槽位改为生成精英（总量不增、质量换）</summary>
+        public const int EliteInWaveMax = 32;
+
+        /// <summary>Boss 登场轮次：第 5、10 轮各 1 只（bossIndex 从 1 起，血量 ×bossIndex）</summary>
+        public static readonly int[] BossWaves = { 5, 10 };
+
+        /// <summary>Boss 轮普通数量减半（让 Boss 成为焦点）</summary>
+        public const float BossWaveNormalScale = 0.5f;
+
+        /// <summary>体型倍率（相对普通近战 1×1）：精英 = 2 倍，Boss = 4 倍</summary>
+        public const float EliteBodyScale = 2.0f;
+        public const float BossBodyScale = 4.0f;
+
+        /// <summary>血量倍率（相对普通近战基础血 3）：精英 = 4 倍，Boss = 8 倍（首只 24，第 10 轮 48）</summary>
+        public const int EliteHealthMultiplier = 4;
+        public const int BossHealthMultiplier = 8;
+
+        /// <summary>精英投掷距离倍率（相对普通远程 attackRange 6.0）：2 倍 = 12.0</summary>
+        public const float EliteThrowRangeScale = 2.0f;
+
+        /// <summary>Boss 扇形横扫倍率（相对普通近战 120°·r2.0）：面积 4 倍 → 半径 4.0（×2）+ 角度保持 120°</summary>
+        public const float BossSweepRadius = 4.0f;
+        public const float BossSweepAngle = 120f;
+
+        /// <summary>Boss 直线冲撞参数（tile/s、tile）</summary>
+        public const float BossChargeSpeed = 8.0f;
+        public const float BossChargeDistance = 6.0f;
+
+        /// <summary>Boss 八方向扇形横扫：每次朝 8 个米字方向各发一个扇形</summary>
+        public const int BossSweepDirections = 8;
 
         // ==================== 第 6 章 时间难度曲线（仅驱动敌人血量成长） ====================
 
@@ -93,8 +129,12 @@ namespace BiuBiu.Core
         /// <summary>普通敌人血量成长：基础值 + floor(L / 该值)，约每 2 分钟全体 +1 血</summary>
         public const int EnemyHealthGrowthDivisor = 4;
 
-        /// <summary>精英血量成长：10 + floor(L / 该值)，比普通敌人更陡</summary>
-        public const int EliteHealthGrowthDivisor = 2;
+        /// <summary>第 8 轮起普通血量线性偏陡加成：额外血 = floor((wave - WaveCapWave) * baseHealth * 0.5)，约每轮 +50% 基础血</summary>
+        public static int NormalHealthBonusFromWave(int wave, int baseHealth)
+        {
+            if (wave <= WaveCapWave) return 0;
+            return Mathf.FloorToInt((wave - WaveCapWave) * baseHealth * 0.5f);
+        }
 
         // ==================== 第 6.3 章 性能保护上限 ====================
 
@@ -109,7 +149,7 @@ namespace BiuBiu.Core
 
         // ==================== 第 9 章 交互与演出数值 ====================
 
-        /// <summary>成就 toast 显示时长（秒）</summary>
+        /// <summary>开场提示 toast 显示时长（秒）；命名沿用早期成就 toast 时长，现为开场白提示用</summary>
         public const float AchievementToastDuration = 2.0f;
 
         // ---- 角色头顶气泡（数值文档第 9 章，v3.6 新增）----
@@ -331,10 +371,10 @@ namespace BiuBiu.Core
             return baseHealth + Mathf.FloorToInt((float)level / EnemyHealthGrowthDivisor);
         }
 
-        /// <summary>精英当前血量 = 10 + floor(L / 2)（数值文档 6.1；基础 10 落在 EnemyData）</summary>
+        /// <summary>精英当前血量 = 近战 4 倍（固定 12，不随难度级成长；4 倍基准已落 EnemyData.baseHealth）</summary>
         public static int EliteHealth(int baseHealth, int level)
         {
-            return baseHealth + Mathf.FloorToInt((float)level / EliteHealthGrowthDivisor);
+            return baseHealth;
         }
     }
 }

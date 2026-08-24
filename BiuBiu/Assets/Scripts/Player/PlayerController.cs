@@ -285,6 +285,9 @@ namespace BiuBiu.Player
             if (hurtVignette == null) hurtVignette = FindObjectOfType<HurtVignette>();
             if (hurtVignette != null) hurtVignette.Flash();
 
+            // 受击音效：仅实际扣血时播放（GodMode/无敌/翻滚无敌期已在上方拦截）
+            AudioManager.Play("player_hurt");
+
             // 受击气泡（设计文档 14.x）
             SpeechBubbleManager.Say(transform, SpeakerType.Player, SpeechEvent.Hit);
 

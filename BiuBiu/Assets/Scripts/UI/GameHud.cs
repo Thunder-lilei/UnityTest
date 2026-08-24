@@ -7,8 +7,8 @@ using UnityEngine;
 namespace BiuBiu.UI
 {
     /// <summary>
-    /// 战斗 HUD（灰盒 OnGUI）：局时「mm:ss」+ 轮次「第 N 轮」、血量红心、消息框 toast
-    /// （开场/轮次/精英·Boss 登场提示——订阅 EnemySpawner2D.OnEnemyIntro，文案就地维护于 Spawner，2s 淡出）。
+    /// 战斗 HUD（灰盒 OnGUI）：局时「mm:ss」+ 轮次「第 N 轮」、右上角「剩余敌人 N」（普通+精英+Boss 统一计数）、
+    /// 血量红心、消息框 toast（开场/轮次/精英·Boss 登场提示——订阅 EnemySpawner2D.OnEnemyIntro，2s 淡出）。
     /// 暂停/战报打开时本 HUD 照常显示（底层）。
     /// </summary>
     public class GameHud : MonoBehaviour
@@ -44,7 +44,7 @@ namespace BiuBiu.UI
         private void OnEnemyIntro(string text)
         {
             introText = text;
-            introTimer = GameBalance.AchievementToastDuration; // 复用 toast 时长 2s
+            introTimer = GameBalance.AchievementToastDuration; // 开场提示 toast 时长 2s
         }
 
         private void Update()
@@ -149,6 +149,18 @@ namespace BiuBiu.UI
             int waveNum = BiuBiu.Enemies.EnemySpawner2D.CurrentWave;
             GUI.Label(new Rect(12f, 8f, 400f, 28f),
                 $"{stats.ElapsedTimeString}    第 {waveNum} 轮", labelStyle);
+
+            // ---- 右上角：当前轮次剩余敌人数量（普通 + 精英 + Boss，清场才进下一轮） ----
+            int remaining = BiuBiu.Enemies.EnemySpawner2D.RemainingEnemies;
+            var rightStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 20,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.UpperRight
+            };
+            rightStyle.normal.textColor = new Color(0.95f, 0.95f, 0.95f);
+            GUI.Label(new Rect(Screen.width - 260f, 8f, 248f, 28f),
+                $"剩余敌人 {remaining}", rightStyle);
 
             // ---- 血量红心（GUI.DrawTexture 实心绘制替代 GUI.Box——后者默认皮肤填充过淡呈「空心」观感） ----
             var ps = GameBootstrap.Instance.PlayerStats;
