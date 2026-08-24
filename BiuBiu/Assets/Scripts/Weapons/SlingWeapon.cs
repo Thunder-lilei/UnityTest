@@ -1,4 +1,6 @@
 using BiuBiu.Core;
+using BiuBiu.Data;
+using BiuBiu.UI;
 using UnityEngine;
 
 namespace BiuBiu.Weapons
@@ -72,6 +74,7 @@ namespace BiuBiu.Weapons
                     chargeTimer = 0f;
                     chargeLevel = 0;
                     playerOriginalPos = transform.position;
+                    AudioManager.PlayLoop("laser_charge"); // 蓄力起手音效（持续音，松手/中断即停）
                 }
 
                 chargeTimer += Time.deltaTime;
@@ -98,12 +101,22 @@ namespace BiuBiu.Weapons
                 chargeOrb.transform.localScale = Vector3.one * orbSize;
                 chargeOrb.color = levelColors[chargeLevel];
 
-                // 蓄力拉拽动作：玩家向瞄准反方向后退（速度随蓄力等级增大）
+                // 蓄力拉拽动作：玩家向瞄准反方向缓慢后退，但总位移封顶（基于蓄力起点），
+                // 避免长按无限倒退、也避免松手时已有过大偏移显得突兀
                 if (chargeLevel > 0)
                 {
-                    float pullSpeed = 0.5f + chargeLevel * 0.5f; // 一级1.0/二级1.5 tile/s
-                    Vector2 pullBack = -aimDir * pullSpeed * Time.deltaTime;
-                    transform.position += (Vector3)pullBack;
+                    Vector2 target = (Vector2)playerOriginalPos - aimDir * GameBalance.ChargeMaxPullback;
+                    // 仅在未超过封顶距离时朝目标推进（每帧小幅逼近，手感平滑）
+                    Vector2 cur = transform.position;
+                    if (Vector2.Distance(cur, playerOriginalPos) < GameBalance.ChargeMaxPullback - 0.001f)
+                    {
+                        float pullSpeed = 0.5f + chargeLevel * 0.5f; // 一级1.0/二级1.5 tile/s
+                        Vector3 pullBack = (Vector3)((-aimDir * pullSpeed * Time.deltaTime));
+                        Vector3 np = transform.position + pullBack;
+                        // 不超过封顶目标点
+                        if (Vector2.Distance((Vector2)np, playerOriginalPos) <= GameBalance.ChargeMaxPullback)
+                            transform.position = np;
+                    }
                 }
             }
 
@@ -115,12 +128,13 @@ namespace BiuBiu.Weapons
             }
         }
 
-        /// <summary>取消蓄力（面板打开/切场景等）</summary>
+        /// <summary>取消蓄力（松开发射/面板打开/切场景等）。停止蓄力持续音，保证无论蓄力时长多少都立即终止。</summary>
         private void CancelCharge()
         {
             isCharging = false;
             IsCharging = false;
             chargeOrb.enabled = false;
+            AudioManager.StopLoop(); // 终止蓄力音（发射时由发射音接续，中断时直接停）
         }
 
         /// <summary>发射弹丸（三档：0=白速射/1=黄/2=红，档位由实际蓄力时长决定）</summary>
@@ -140,7 +154,14 @@ namespace BiuBiu.Weapons
             var proj = go.GetComponent<PlayerProjectile>();
             proj.Launch(aimDir, level, damage, knockback, shatter);
 
+            // 发射吐槽气泡（设计文档 14.x，可选）
+            SpeechBubbleManager.Say(transform, SpeakerType.Player, SpeechEvent.Attack);
+
             if (trauma != null) trauma.AddTrauma(0.1f * level);
+
+            // 发射后坐力：沿瞄准反方向短促回弹，幅度随蓄力档位递增（PlayerController 接管位移）
+            var player = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+            if (player != null) player.ApplyRecoil(aimDir, level);
         }
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BiuBiu.Enemies
 {
     /// <summary>
-    /// 敌方弹丸（数值文档 5.1 投掷丧尸直线弹 / 5.3 大蜘蛛环形与直线弹）。
+    /// 敌方弹丸（数值文档 5.1 远程直线弹 / 5.3 Boss 环形与直线弹）。
     /// 直线飞行 → 命中玩家（距离判定）掉心 / 碰墙（出有效地图区）或超时回收。
     /// 判定用距离而非 Physics2D（性能可控且与玩家无敌帧逻辑解耦）。
     /// 池化：本组件由生成方经 ObjectPool 管理，回收=ObjectPool.Release(gameObject)。

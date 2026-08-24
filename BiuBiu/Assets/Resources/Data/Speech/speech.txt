@@ -1,0 +1,33 @@
+# BiuBiu 角色头顶气泡文案（v3.6）
+# 格式：说话者.事件 : 文案1 | 文案2 | 文案3
+# 说话者：Player / Melee / Ranged / MeleeSweep / Elite / Boss
+# 事件：Spawn(登场) / Hit(受击) / Attack(出手) / Death(死亡) / RoundUp(主角每轮变强)
+# 改文案只改本文件即可，无需修改任何脚本。
+
+# 主角
+Player.Hit : 俺不中咧！ | 痛痛痛痛痛——
+Player.RoundUp : 这波强化像没加一样 | 我好像…变强了一纳米
+Player.Attack : 吃我一弹！ | 瞄准——发射！ | 看招！
+
+# 近战丧尸（扇形型）
+Melee.Spawn : 啊…脑子… | 我是来散步的 | 今天也想啃一口
+Melee.Hit : 别打脸！ | 我只是个路过的 | 嗷！我的假牙 | 这不公平！
+Melee.Attack : 尝尝这个！ | 啃你一口！ | 冲鸭！
+Melee.Death : 我还没吃午饭… | 这波亏了 | 下辈子还当丧尸 | 啊…散架了
+
+# 远程丧尸（直线弹）
+Ranged.Spawn : 看我抛物线 | 远程才是王道
+Ranged.Attack : 接招！ | 抛物线美术生 | biu——
+Ranged.Death : 手…抖了 | 抛物线算错了 | 下次一定中
+
+# 近战横扫丧尸
+MeleeSweep.Spawn : 我是一扇有理想的门 | 撞就完了 | 门板战术，启动
+MeleeSweep.Death : 门…碎了 | 我本是防盗门 | 下次换钢化玻璃
+
+# 精英
+Elite.Spawn : 精英，驾到 | 都给我让开 | 今天的主角是我
+Elite.Death : 精英…也会死的吗 | 我的排面呢 | 不服，重来
+
+# Boss
+Boss.Spawn : 蛛网，已布好 | 小小的虫子们 | 本蛛今天心情不错
+Boss.Death : 森林…塌了 | 八条腿…都麻了 | 下次织更大的网

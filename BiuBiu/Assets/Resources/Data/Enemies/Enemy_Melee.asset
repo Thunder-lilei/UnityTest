@@ -10,21 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c03675835b1354f488dd1a8e3b584445, type: 3}
-  m_Name: Enemy_BossSpider
+  m_Name: Enemy_Melee
   m_EditorClassIdentifier: 
-  enemyId: boss_spider
-  displayName: "\u68EE\u6797\u5927\u8718\u86DB"
-  enemyType: 2
+  enemyId: melee
+  displayName: "\u8FD1\u6218"
+  enemyType: 0
   prefab: {fileID: 0}
-  baseHealth: 30
-  moveSpeed: 1.6
+  baseHealth: 2
+  moveSpeed: 3.6
   damage: 1
-  expOrbCount: 50
-  bodySize: {x: 3, y: 3}
+  expOrbCount: 1
+  bodySize: {x: 1, y: 1}
   attackType: 0
-  windupTime: 0
-  attackInterval: 0
-  attackRange: 0
+  windupTime: 0.4
+  attackInterval: 1
+  attackRange: 0.6
   sweepAngle: 120
   projectileSpeed: 0
   unlockTime: 0
@@ -33,12 +33,12 @@ MonoBehaviour:
   chargeDistance: 0
   chargeCooldown: 0
   chargePlayerKnockback: 0
-  contactTickInterval: 0.5
-  ringBulletCount: 12
-  ringBulletSpeed: 1.5
-  ringCooldown: 6
-  lineBulletCount: 5
-  lineFireInterval: 0.25
-  lineBulletSpeed: 3
-  lineCooldown: 8
+  contactTickInterval: 0
+  ringBulletCount: 0
+  ringBulletSpeed: 0
+  ringCooldown: 0
+  lineBulletCount: 0
+  lineFireInterval: 0
+  lineBulletSpeed: 0
+  lineCooldown: 0
   bulletRadius: 0.3

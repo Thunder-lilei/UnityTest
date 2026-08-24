@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c03675835b1354f488dd1a8e3b584445, type: 3}
-  m_Name: Enemy_ThrowerZombie
+  m_Name: Enemy_Ranged
   m_EditorClassIdentifier: 
-  enemyId: thrower_zombie
-  displayName: "\u6295\u63B7\u4E27\u5C38"
+  enemyId: ranged
+  displayName: "\u8FDC\u7A0B"
   enemyType: 0
   prefab: {fileID: 0}
   baseHealth: 2
   moveSpeed: 3.0
   damage: 1
   expOrbCount: 2
-  bodySize: {x: 1, y: 1}
+  bodySize: {x: 0.66, y: 1}
   attackType: 1
   windupTime: 0.6
   attackInterval: 2

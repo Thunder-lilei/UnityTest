@@ -1,4 +1,5 @@
 using BiuBiu.Core;
+using BiuBiu.Data;
 using BiuBiu.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -23,6 +24,7 @@ namespace BiuBiu.Player
         private SpriteRenderer sr;          // 本体渲染（翻滚半透明闪烁/死亡隐藏）
         private HitFlash hitFlash;          // 受击闪白（M0-3）
         private CameraTrauma trauma;        // 震屏（M0-5）
+        private HurtVignette hurtVignette;   // 受击红边控制器（实际扣血时触发）
         private Camera mainCam;             // 主相机（死亡镜头聚焦）
         private InputAction moveAction;     // Move：Vector2
         private InputAction rollAction;     // Roll：Button（支持改键后的绑定）
@@ -32,6 +34,11 @@ namespace BiuBiu.Player
         private float rollTimer;            // 翻滚计时（>0 = 翻滚中）
         private Vector2 rollDir;            // 翻滚方向（单位向量）
         private Vector2 lastMoveDir = Vector2.down; // 上一次移动方向（无输入时翻滚的兜底方向）
+
+        // ---- 发射后坐力（沿瞄准反方向的短促回弹；三档递增，见 GameBalance.PlayerRecoilDistance）----
+        private float recoilTimer;        // 后坐力剩余回弹时长（>0 = 回弹中）
+        private Vector2 recoilDir;        // 后坐力方向（瞄准反方向，单位向量）
+        private float recoilTotal;        // 本次后坐力峰值位移（tile）
 
         // ---- 翻滚残影（M2：位置残影序列替代 alpha 闪烁）----
         private float afterimageTimer;
@@ -199,6 +206,22 @@ namespace BiuBiu.Player
                 transform.position = pos;
             }
 
+            // ---- 发射后坐力：沿瞄准反方向短促冲出后缓回原点（不破坏走位；翻滚期已在上方 return 跳过） ----
+            if (recoilTimer > 0f)
+            {
+                recoilTimer -= Time.deltaTime;
+                // 进度 0→1 的脉冲：前半冲出、后半缓回（SmoothStep 对称）
+                float t = 1f - Mathf.Clamp01(recoilTimer / GameBalance.PlayerRecoilDuration);
+                float env = Mathf.Sin(t * Mathf.PI); // 0→1→0 的正弦包络，峰值在中点
+                Vector3 recoilDelta = (Vector3)(recoilDir * (recoilTotal * env));
+                Vector3 rpos = transform.position;
+                rpos.x += recoilDelta.x;
+                if (!IsBlocked(rpos)) transform.position = rpos; // 防卡墙：受阻则放弃该轴推进
+                rpos = transform.position;
+                rpos.y += recoilDelta.y;
+                if (!IsBlocked(rpos)) transform.position = rpos;
+            }
+
             // ---- 翻滚触发（周期结束才可再次触发=自然限频） ----
             if (rollAction != null && rollAction.WasPerformedThisFrame())
             {
@@ -220,6 +243,18 @@ namespace BiuBiu.Player
             float r = GameBalance.PlayerCollisionRadius;
             var hit = Physics2D.OverlapCircle(pos, r);
             return hit != null && hit is BoxCollider2D;
+        }
+
+        /// <summary>发射后坐力触发（SlingWeapon.Fire 调用）：沿瞄准反方向短促回弹，幅度按蓄力档位递增</summary>
+        /// <param name="aimDir">瞄准方向（单位向量）；后坐力取其反方向</param>
+        /// <param name="level">蓄力档位（0=白/1=黄/2=红），决定后坐力强度</param>
+        public void ApplyRecoil(Vector2 aimDir, int level)
+        {
+            if (dead) return;
+            level = Mathf.Clamp(level, 0, GameBalance.PlayerRecoilDistance.Length - 1);
+            recoilDir = (-aimDir).normalized;
+            recoilTotal = GameBalance.PlayerRecoilDistance[level];
+            recoilTimer = GameBalance.PlayerRecoilDuration;
         }
 
         /// <summary>回复治疗（每轮结束回满血调用；EnemySpawner2D.ApplyRoundBonus）</summary>
@@ -246,6 +281,13 @@ namespace BiuBiu.Player
             hitFlash.PlayFlash(invuln); // 受击闪白与无敌同步
             invulnTimer = invuln;
             if (trauma != null) trauma.AddTrauma(GameBalance.TraumaPlayerHit); // 受击强震
+
+            // 受击红边（Hurt Vignette）：仅在实际扣血时触发，独立于闪白/震屏的叠加层
+            if (hurtVignette == null) hurtVignette = FindObjectOfType<HurtVignette>();
+            if (hurtVignette != null) hurtVignette.Flash();
+
+            // 受击气泡（设计文档 14.x）
+            SpeechBubbleManager.Say(transform, SpeakerType.Player, SpeechEvent.Hit);
 
             if (health <= 0) BeginDeath();
         }

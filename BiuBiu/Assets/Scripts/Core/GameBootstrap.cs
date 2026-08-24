@@ -153,7 +153,7 @@ namespace BiuBiu.Core
         // ==================== 事件汇总（各系统 → 统计） ====================
 
         /// <summary>
-        /// 敌人击杀通知（EnemyBase2D 死亡时调用）：计数 + 大蜘蛛标记。
+        /// 敌人击杀通知（EnemyBase2D 死亡时调用）：计数 + Boss 标记。
         /// </summary>
         public void NotifyEnemyKilled(bool isBoss)
         {

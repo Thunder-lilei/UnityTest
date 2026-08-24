@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BiuBiu.Enemies
 {
     /// <summary>
-    /// Boss：森林大蜘蛛（数值文档 5.3；行为差异大，继承 EnemyBase2D 复用受击/死亡/血条链路）。
+    /// Boss（数值文档 5.3；行为差异大，继承 EnemyBase2D 复用受击/死亡/血条链路）。
     /// - 血量 30 ×n（第 n 只，一只比一只强；Spawner 传入 bossIndex）；
     /// - 移速 0.8 慢速逼近；接触伤害 1 心，0.5s 结算一次；
     /// - 技能循环：环形 12 发 → 2s → 直线连射 5 发（间隔 0.25s）→ 2s → 循环；
@@ -38,7 +38,7 @@ namespace BiuBiu.Enemies
         /// <summary>
         /// Boss 专属初始化（血量 = baseHealth × bossIndex，数值文档 5.3「30 ×n」）。
         /// </summary>
-        /// <param name="bossData">Boss 配置（Enemy_BossSpider）</param>
+        /// <param name="bossData">Boss 配置（Enemy_Boss）</param>
         /// <param name="bossIndex">第几只（1 起：5:00 首只=1，之后每 300s +1）</param>
         public void InitializeBoss(Data.EnemyData bossData, int bossIndex)
         {

@@ -27,6 +27,15 @@ namespace BiuBiu.Core
         /// <summary>玩家受击无敌时长（秒，与闪白同步）</summary>
         public const float PlayerInvulnDuration = 1.0f;
 
+        // ── 受击红边（Hurt Vignette，GameFeel 危险反馈）──
+        // 玩家实际扣血时屏幕边缘浮现红色径向晕影；残血时叠加常驻红晕。
+        // 全部走 IMGUI（OnGUI 画运行时生成的径向渐变贴图），无后处理栈、无 shader 后处理。
+        public const float HurtVignetteFlashInTime = 0.07f;   // 红边淡入时长（秒）：受击瞬间快速亮起
+        public const float HurtVignetteFadeOutTime = 0.5f;    // 红边淡出时长（秒）：受击无敌窗口内的平滑消退
+        public const float HurtVignettePeakAlpha = 0.6f;      // 红边峰值 alpha 上限（0~1）：多受击 clamp 不爆表
+        public const int HurtVignetteLowHealthThreshold = 1;  // 残血阈值（心）：当前血量 ≤ 此值时红晕常驻
+        public const float HurtVignetteLowHealthAlpha = 0.18f;// 残血常驻 alpha（0~1）：轻微持续红晕强度
+
         /// <summary>翻滚无敌时长（秒，动作周期前段）</summary>
         public const float RollInvulnTime = 0.30f;
 
@@ -35,6 +44,12 @@ namespace BiuBiu.Core
 
         /// <summary>翻滚位移距离（tile，位移曲线缓入缓出）</summary>
         public const float RollDistance = 2.5f;
+
+        /// <summary>发射后坐力：各蓄力档位的反向位移幅度（tile，沿瞄准反方向瞬时冲出后缓回）。三档递增——绷得越满弹得越狠；零级极微保留连续射击节奏感，不干扰走位</summary>
+        public static readonly float[] PlayerRecoilDistance = { 0.01f, 0.024f, 0.044f };
+
+        /// <summary>发射后坐力回弹总时长（秒）：冲出→缓回原点的周期，短时不影响走位</summary>
+        public const float PlayerRecoilDuration = 0.12f;
 
         /// <summary>玩家圆形碰撞半径（tile）</summary>
         public const float PlayerCollisionRadius = 0.4f;
@@ -51,10 +66,10 @@ namespace BiuBiu.Core
         /// <summary>精英首次登场时间（秒）</summary>
         public const float EliteFirstSpawnTime = 180f;
 
-        /// <summary>大蜘蛛登场间隔（秒；5:00 首只，此后每 300s 一只，一只比一只强）</summary>
+        /// <summary>Boss 登场间隔（秒；5:00 首只，此后每 300s 一只，一只比一只强）</summary>
         public const float BossSpawnInterval = 300f;
 
-        /// <summary>大蜘蛛首次登场时间（秒）</summary>
+        /// <summary>Boss 首次登场时间（秒）</summary>
         public const float BossFirstSpawnTime = 300f;
 
         // ==================== 第 6 章 时间难度曲线（仅驱动敌人血量成长） ====================
@@ -83,6 +98,20 @@ namespace BiuBiu.Core
 
         /// <summary>成就 toast 显示时长（秒）</summary>
         public const float AchievementToastDuration = 2.0f;
+
+        // ---- 角色头顶气泡（数值文档第 9 章，v3.6 新增）----
+
+        /// <summary>气泡总存活时长（秒）= 显示期 + 淡出期</summary>
+        public const float BubbleLifetime = 2.0f;
+
+        /// <summary>气泡完全显示期（秒，之后进入淡出）</summary>
+        public const float BubbleShowDuration = 1.5f;
+
+        /// <summary>气泡淡出期（秒，透明度 1→0）</summary>
+        public const float BubbleFadeDuration = 0.5f;
+
+        /// <summary>同目标同类事件最小触发间隔（秒，防受击帧每帧冒泡）</summary>
+        public const float BubbleMinInterval = 0.8f;
 
         // ==================== 第 4.2 章 击飞连锁（v3.4；v3.5 改物理冲量驱动） ====================
 
@@ -121,6 +150,9 @@ namespace BiuBiu.Core
         /// <summary>蓄力弹丸视觉：满蓄力时拉回到角色身后的距离（tile，弹弓拉皮筋感）</summary>
         public const float ChargeOrbMaxPull = 0.8f;
 
+        /// <summary>蓄力时玩家反向拉拽的最大总位移（tile，基于蓄力起点封顶）。仅作张力暗示，避免长按无限倒退或松手时偏移过大显得突兀</summary>
+        public const float ChargeMaxPullback = 0.3f;
+
         /// <summary>弹弓弹丸速度（零级=白/一级=黄/二级=红，见数值文档 4.1）</summary>
         public static readonly float[] ProjectileSpeeds = { 7f, 9f, 14f };
 
@@ -133,7 +165,16 @@ namespace BiuBiu.Core
         /// <summary>弹弓弹丸存活上限（秒）</summary>
         public const float ProjectileLifetime = 5f;
 
-        /// <summary>hitstop 时长（秒，仅精英/大蜘蛛终结一击）</summary>
+        /// <summary>弹丸拖尾时长（秒，TrailRenderer.time；数值越大尾巴越长）。三档递增——红档参考满蓄力击碎大块碎片(寿命0.8s/飞出约5tile)的夸张度，拉到 0.35s（红档弹速14→尾长≈4.9tile）</summary>
+        public static readonly float[] ProjectileTrailTime = { 0.12f, 0.22f, 0.35f };
+
+        /// <summary>弹丸拖尾宽度（世界单位，TrailRenderer 宽度；参考满蓄力击碎大块碎片尺寸 10~20px=0.31~0.625tile）。三档 0.3/0.45/0.7：白≈小碎片利落、黄中等、红略超大块上限成霸气粗光带</summary>
+        public static readonly float[] ProjectileTrailWidth = { 0.3f, 0.45f, 0.7f };
+
+        /// <summary>弹丸拖尾末端透明度（0~1，余晖；数值越小尾巴消散越快）。三档 0/0.15/0.35——红档余晖明显，接近击碎爆发的"糊"冲击感</summary>
+        public static readonly float[] ProjectileTrailEndAlpha = { 0.0f, 0.15f, 0.35f };
+
+        /// <summary>hitstop 时长（秒，仅精英/Boss 终结一击）</summary>
         public const float HitstopDuration = 0.12f;
 
         /// <summary>玩家死亡慢动作倍率</summary>
@@ -187,6 +228,48 @@ namespace BiuBiu.Core
 
         /// <summary>相机前瞻偏移平滑时间（秒）</summary>
         public const float CameraLookAheadSmoothTime = 0.15f;
+
+        // ==================== 击碎破碎粒子（数值文档 9 章：仅红档击碎档触发） ====================
+
+        /// <summary>每发击碎爆发的普通碎片数（细碎迸溅）</summary>
+        public const int BreakShardCount = 22;
+
+        /// <summary>普通碎片放射初速下限（tile/s，匀速直线无重力）</summary>
+        public const float BreakShardSpeedMin = 4f;
+
+        /// <summary>普通碎片放射初速上限（tile/s，匀速直线无重力）</summary>
+        public const float BreakShardSpeedMax = 14f;
+
+        /// <summary>普通碎片生命周期（秒）：计时归零回池自毁，不依赖落地判定（俯视角无地面高度）</summary>
+        public const float BreakShardLife = 0.55f;
+
+        /// <summary>普通碎片像素尺寸下限（px，经 PPU=32 换算为 scale）</summary>
+        public const float BreakShardSizeMin = 3f;
+
+        /// <summary>普通碎片像素尺寸上限（px，经 PPU=32 换算为 scale）</summary>
+        public const float BreakShardSizeMax = 12f;
+
+        /// <summary>碎片放射张角（弧度，半角）：以弹丸飞行方向为基准向四周散开</summary>
+        public const float BreakShardSpread = Mathf.PI * 0.5f;
+
+        // ---- 大块碎片（满蓄力击碎“更夸张”的核心：少量大而慢的碎块，强化崩解冲击） ----
+        /// <summary>大块碎片数（少量，突出崩解主视觉）</summary>
+        public const int BreakChunkCount = 6;
+
+        /// <summary>大块碎片放射初速下限（tile/s，比普通碎片慢，飞得更近更“沉”）</summary>
+        public const float BreakChunkSpeedMin = 2f;
+
+        /// <summary>大块碎片放射初速上限（tile/s）</summary>
+        public const float BreakChunkSpeedMax = 7f;
+
+        /// <summary>大块碎片生命周期（秒，比普通碎片久，留得更明显）</summary>
+        public const float BreakChunkLife = 0.8f;
+
+        /// <summary>大块碎片像素尺寸下限（px，明显大于普通碎片）</summary>
+        public const float BreakChunkSizeMin = 10f;
+
+        /// <summary>大块碎片像素尺寸上限（px）</summary>
+        public const float BreakChunkSizeMax = 20f;
 
         // ==================== 大地图（设计文档 3.1 章） ====================
         public const int MapSizeTiles = 108;

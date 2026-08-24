@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BiuBiu.Core;
 using BiuBiu.Data;
+using BiuBiu.UI;
 using UnityEngine;
 
 namespace BiuBiu.Enemies
@@ -11,26 +12,26 @@ namespace BiuBiu.Enemies
     /// - 生成位置：屏幕外环形区；
     /// - 每轮数量 = 2^(轮次-1)，类型从已解锁敌人中随机；
     /// - 精英：3:00 首只，此后每 180s 一只（独立计时不占波次配额）；
-    /// - 大蜘蛛：5:00 首只，此后每 300s 一只（第 n 只血量 30×n）；
+    /// - Boss：5:00 首只，此后每 300s 一只（第 n 只血量 30×n）；
     /// - EnemyData SO 数据驱动；配置为空时 Resources 兜底加载。
     /// </summary>
     public class EnemySpawner2D : MonoBehaviour
     {
         [Header("敌人配置（空=Resources 兜底加载）")]
-        [Tooltip("普通敌人配置数组（普通/投掷/门板丧尸；unlockTime 驱动解锁表）")]
+        [Tooltip("基础敌人配置数组（近战扇形 / 远程直线 / 近战横扫；unlockTime 驱动解锁表）")]
         [SerializeField] private EnemyData[] normalEnemies;
 
-        [Tooltip("精英配置（强化门板丧尸）")]
+        [Tooltip("精英配置（精英）")]
         [SerializeField] private EnemyData eliteData;
 
-        [Tooltip("Boss 配置（森林大蜘蛛）")]
+        [Tooltip("Boss 配置（Boss）")]
         [SerializeField] private EnemyData bossData;
 
         [Header("生成参数")]
         [Tooltip("屏幕外生成外扩边距（tile，相对视口矩形）")]
         [SerializeField] private float spawnMargin = 1.5f;
 
-        /// <summary>消息提示事件（HUD toast：开场/轮次/精英·大蜘蛛登场，文案就地维护）</summary>
+        /// <summary>消息提示事件（HUD toast：开场/轮次/精英·Boss 登场，文案就地维护）</summary>
         public static event Action<string> OnEnemyIntro;
         /// <summary>开场消息缓冲：Start() 可能早于 GameHud 订阅，故缓存供 HUD 启用时补消费，避免丢失。</summary>
         public static string PendingOpeningMessage { get; private set; }
@@ -51,8 +52,8 @@ namespace BiuBiu.Enemies
         private float waveSpawnTimer;                     // 本轮生成间隔计时
         private readonly List<GameObject> activeNormals = new List<GameObject>(); // 活跃普通敌人
         private float nextEliteTime;                     // 下一只精英生成时刻
-        private float nextBossTime;                      // 下一只大蜘蛛生成时刻
-        private int bossCount;                           // 已生成大蜘蛛数（第 n 只血量 30×n）
+        private float nextBossTime;                      // 下一只 Boss 生成时刻
+        private int bossCount;                           // 已生成 Boss 数（第 n 只血量 30×n）
         private float waveDelayTimer;                    // 波次间隔等待计时（>0=等待中）
 
         // ---- 灰盒模板（EnemyData.prefab 为空时兜底；静态缓存跨实例复用） ----
@@ -69,15 +70,15 @@ namespace BiuBiu.Enemies
             {
                 normalEnemies = new[]
                 {
-                    Resources.Load<EnemyData>(ResPath + "Enemy_NormalZombie"),
-                    Resources.Load<EnemyData>(ResPath + "Enemy_ThrowerZombie"),
-                    Resources.Load<EnemyData>(ResPath + "Enemy_DoorZombie")
+                    Resources.Load<EnemyData>(ResPath + "Enemy_Melee"),
+                    Resources.Load<EnemyData>(ResPath + "Enemy_Ranged"),
+                    Resources.Load<EnemyData>(ResPath + "Enemy_MeleeSweep")
                 };
             }
             if (eliteData == null) eliteData = Resources.Load<EnemyData>(ResPath + "Enemy_Elite");
-            if (bossData == null) bossData = Resources.Load<EnemyData>(ResPath + "Enemy_BossSpider");
+            if (bossData == null) bossData = Resources.Load<EnemyData>(ResPath + "Enemy_Boss");
 
-            // 独立定时器初值（数值文档 5.2/5.3：精英 3:00 首只、大蜘蛛 5:00 首只）
+            // 独立定时器初值（数值文档 5.2/5.3：精英 3:00 首只、Boss 5:00 首只）
             nextEliteTime = GameBalance.EliteFirstSpawnTime;
             nextBossTime = GameBalance.BossFirstSpawnTime;
 
@@ -137,12 +138,12 @@ namespace BiuBiu.Enemies
                 OnEnemyIntro?.Invoke("精英来了！");
             }
 
-            // ---- 大蜘蛛独立定时（不占波次配额；每只都提示——一只比一只强） ----
+            // ---- Boss 独立定时（不占波次配额；每只都提示——一只比一只强） ----
             if (bossData != null && elapsed >= nextBossTime)
             {
                 nextBossTime += GameBalance.BossSpawnInterval;
                 SpawnBoss();
-                OnEnemyIntro?.Invoke("大蜘蛛登场！！");
+                OnEnemyIntro?.Invoke("Boss 登场！！");
             }
         }
 
@@ -163,6 +164,10 @@ namespace BiuBiu.Enemies
                 player.Heal(maxHp); // 回满
             }
             OnEnemyIntro?.Invoke($"第 {waveNumber} 轮！  我感觉好像强了一点点！");
+
+            // 主角每轮变强头顶气泡（设计文档 14.x）
+            if (player != null)
+                SpeechBubbleManager.Say(player.transform, SpeakerType.Player, SpeechEvent.RoundUp);
         }
 
         /// <summary>生成一只普通敌人（已解锁类型中随机）</summary>
@@ -182,7 +187,7 @@ namespace BiuBiu.Enemies
             }
             if (picked == null) return;
 
-            // 三丧尸开局混合出现（数值文档 v2.4：解锁表归零），新敌登场提示不再触发
+            // 三类基础敌人开局混合出现（数值文档 v2.4：解锁表归零），新敌登场提示不再触发
 
             var go = SpawnOne(picked, GreyNormalTemplate);
             go.GetComponent<EnemyBase2D>().Initialize(picked, level);
@@ -197,7 +202,7 @@ namespace BiuBiu.Enemies
             // 精英不计入普通上限（数值文档 6.1）
         }
 
-        /// <summary>生成大蜘蛛（第 n 只血量 30×n）</summary>
+        /// <summary>生成 Boss（第 n 只血量 30×n）</summary>
         private void SpawnBoss()
         {
             bossCount++;

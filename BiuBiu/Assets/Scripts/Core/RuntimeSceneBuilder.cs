@@ -126,6 +126,7 @@ namespace BiuBiu.Core
             ui.transform.SetParent(transform, false);
             ui.AddComponent<GameHud>();
             ui.AddComponent<PauseMenu>();
+            ui.AddComponent<HurtVignette>(); // 受击红边控制器（运行时生成径向贴图，OnGUI 绘制）
         }
     }
 }

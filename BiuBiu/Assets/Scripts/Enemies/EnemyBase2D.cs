@@ -3,6 +3,7 @@ using BiuBiu.Core;
 using BiuBiu.Data;
 using BiuBiu.Drops;
 using BiuBiu.Player;
+using BiuBiu.UI;
 using UnityEngine;
 
 namespace BiuBiu.Enemies
@@ -10,14 +11,14 @@ namespace BiuBiu.Enemies
     /// <summary>
     /// 正式敌人基类（数值文档 5.1/5.2；EnemyData SO 数据驱动，替换 M0 灰盒 GreyBoxZombie）。
     /// 覆盖普通敌人三种攻击方式 + 精英冲撞（Boss 行为差异大，见 EnemyBoss2D）：
-    /// - 近战单点（普通丧尸）：贴身 → 前摇渐红 → 命中判定 → 冷却；
-    /// - 远程直线（投掷丧尸）：进入射程 → 前摇 → 发射直线弹丸（Projectile2D）→ 冷却；
-    /// - 范围横扫（门板丧尸/精英）：进入半径 → 前摇 → 朝玩家方向扇形判定 → 冷却；
+    /// - 近战单点（近战扇形型）：贴身 → 前摇渐红 → 命中判定 → 冷却；
+    /// - 远程直线（远程）：进入射程 → 前摇 → 发射直线弹丸（Projectile2D）→ 冷却；
+    /// - 范围横扫（近战横扫型/精英）：进入半径 → 前摇 → 朝玩家方向扇形判定 → 冷却；
     /// - 精英冲撞：冷却转好 → 前摇 0.6s → 6.0 tile/s 直线冲 5 tile（路径接触 1 伤+击退玩家）→ 冷却 5s。
     /// 物理方案：Rigidbody2D Dynamic + CircleCollider2D（敌人间物理分离防堆叠）；
     /// 玩家无碰撞体（代码距离判定伤害，可穿敌群靠翻滚无敌帧脱身）。
     /// 通用反馈：受击闪白（HitFlash）+ 击退（IKnockbackable）+ 头顶血条；
-    /// 精英/大蜘蛛血量阈值掉血瓶（75%/50%/25% 各 1，数值文档 5.2/5.3）。
+    /// 精英/Boss 血量阈值掉血瓶（75%/50%/25% 各 1，数值文档 5.2/5.3）。
     /// </summary>
     public class EnemyBase2D : MonoBehaviour, IDamageable, IKnockbackable
     {
@@ -57,6 +58,12 @@ namespace BiuBiu.Enemies
         // ---- 视觉基准（前摇渐变/池复用重置） ----
         private Color baseColor;
 
+        /// <summary>
+        /// 敌人主色（只读）。击碎破碎粒子着色取自此处（与灰盒/血条同源：GreyColor(enemyType)）。
+        /// 池复用 Reset 时随 baseColor 一并复位，取色时机须在 Shatter 回池前。
+        /// </summary>
+        public Color MainColor => baseColor;
+
         // ---- 击退（物理冲量驱动，v3.5） ----
         private float knockTimer;
         private bool isKnockFlying;        // 当前击退是否为可连锁的飞行态
@@ -74,16 +81,17 @@ namespace BiuBiu.Enemies
         private float chargeRemaining;     // 剩余冲刺距离（tile）
         private bool chargeHitPlayer;      // 本次冲撞是否已命中（一次冲撞只伤一次）
 
-        // ---- 血瓶阈值（精英/大蜘蛛；普通敌人恒 0 不触发） ----
+        // ---- 血瓶阈值（精英/Boss；基础敌人恒 0 不触发） ----
         private int potionThresholdsFired;
 
         // ---- 投掷蓄力（弹弓拉拽效果）----
         private GameObject pendingProjectile; // 蓄力中的投掷物（尚未发射）
+        private Transform carryBall;           // 远程常驻投掷物圆球（0 蓄力外观，蓄力时隐藏避免与飞行弹丸重复）
 
         // ---- 血条（头顶，灰盒：黑底+红条） ----
         private Transform healthBarFill;
 
-        /// <summary>是否大蜘蛛（击杀标记/演出强度用；Boss 行为本类不处理，仅复用受击/死亡链路）</summary>
+        /// <summary>是否 Boss（击杀标记/演出强度用；Boss 行为本类不处理，仅复用受击/死亡链路）</summary>
         public bool IsBoss => data != null && data.enemyType == EnemyType.Boss;
 
         /// <summary>敌人配置（子类 Boss 专属行为读取参数用）</summary>
@@ -139,6 +147,41 @@ namespace BiuBiu.Enemies
 
             EnsureHealthBar();
             UpdateHealthBar();
+
+            // 登场气泡（设计文档 14.x / 数值文档 9 章）
+            SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Spawn);
+
+            // 远程敌人常驻 0 蓄力投掷物圆球（与近战方块区分；外观/尺寸与蓄力发射球完全一致：橙红圆、半径 bulletRadius）
+            // 球为独立世界物体（不挂父级，避免非等比缩放压扁/偏移），每帧由 Think 平滑环绕敌人朝玩家方向
+            // 池复用时先清旧球再按类型重建
+            if (carryBall != null) { Destroy(carryBall.gameObject); carryBall = null; }
+            if (data.attackType == EnemyAttackType.RangedLine)
+            {
+                float r = data.bulletRadius;
+                carryBall = GreyBoxFactory.MakeBox("CarryBall", true, new Color(1f, 0.6f, 0.15f), new Vector2(r * 2f, r * 2f)).transform;
+                var cbsr = carryBall.GetComponent<SpriteRenderer>();
+                if (cbsr != null) cbsr.sortingOrder = 15; // 与 Projectile2D.Launch 同排序层
+                // 初始位置：身前 0.55 tile（朝玩家）；Think 每帧平滑跟随，进蓄力时隐藏避免与发射弹丸重复
+                Vector2 aim = ((Vector2)(GameBootstrap.Instance?.GetPlayer()?.transform.position) - (Vector2)transform.position);
+                if (aim == Vector2.zero) aim = Vector2.right;
+                carryBall.position = (Vector2)transform.position + aim.normalized * 0.55f;
+            }
+        }
+
+        /// <summary>EnemyType → SpeakerType（气泡文案池对齐用；按敌人类型区分精英/Boss/各丧尸）</summary>
+        private static SpeakerType ToSpeaker(EnemyData enemyData)
+        {
+            switch (enemyData.enemyType)
+            {
+                case EnemyType.Elite: return SpeakerType.Elite;
+                case EnemyType.Boss: return SpeakerType.Boss;
+            }
+            switch (enemyData.attackType)
+            {
+                case EnemyAttackType.RangedLine: return SpeakerType.Ranged;
+                case EnemyAttackType.ArcSweep: return SpeakerType.MeleeSweep;
+                default: return SpeakerType.Melee;
+            }
         }
 
         /// <summary>覆盖血量（子类 Boss 独立成长公式 30×n 用；同步刷血条）</summary>
@@ -205,6 +248,17 @@ namespace BiuBiu.Enemies
 
             // 冲撞冷却推进（任何状态都计时）
             if (chargeCooldownTimer > 0f) chargeCooldownTimer -= Time.deltaTime;
+
+            // 远程常驻球：平滑环绕敌人朝玩家方向（仅可见时更新；隐藏/蓄力期间不动）
+            if (carryBall != null && carryBall.gameObject.activeSelf)
+            {
+                Vector2 toP = toPlayer; // 已算好的朝玩家向量
+                if (toP == Vector2.zero) toP = Vector2.right;
+                Vector3 target = (Vector2)transform.position + toP.normalized * 0.55f;
+                // 帧率无关平滑（约 12/s 趋近），避免瞬移跳变
+                float k = Mathf.Min(1f, 12f * Time.deltaTime);
+                carryBall.position = Vector3.Lerp(carryBall.position, target, k);
+            }
 
             switch (state)
             {
@@ -292,6 +346,9 @@ namespace BiuBiu.Enemies
                     stateTimer = 0.6f;
                     chargeDir = ((Vector2)player.transform.position - (Vector2)transform.position).normalized;
                     pendingProjectile = null;
+                    // 蓄力中隐藏常驻球；球位置已由 Initialize 固定在局部中心偏前（含 X 补偿），
+                    // 不随 chargeDir 重摆，避免发射复原后偏移累积
+                    if (carryBall != null) carryBall.gameObject.SetActive(false);
                 }
                 else
                 {
@@ -311,6 +368,9 @@ namespace BiuBiu.Enemies
         /// <summary>出手（按攻击方式分支）</summary>
         private void ExecuteAttack(PlayerController player)
         {
+            // 出手气泡（设计文档 14.x）
+            SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Attack);
+
             Vector2 origin = transform.position;
             Vector2 toPlayer = (Vector2)player.transform.position - origin;
             Vector2 aimDir = toPlayer.normalized;
@@ -343,7 +403,7 @@ namespace BiuBiu.Enemies
             }
         }
 
-        /// <summary>发射一枚直线弹丸（投掷丧尸；ObjectPool 池化）</summary>
+        /// <summary>发射一枚直线弹丸（远程；ObjectPool 池化）</summary>
         private void FireProjectile(Vector2 dir)
         {
             var go = ObjectPool.Get(Projectile2D.GreyTemplate,
@@ -434,6 +494,7 @@ namespace BiuBiu.Enemies
                 }
                 // 真正发射：朝玩家方向高速弹丸
                 FireProjectile(chargeDir);
+                if (carryBall != null) carryBall.gameObject.SetActive(true); // 攻击结束恢复常驻球
                 state = State.Cooldown;
                 stateTimer = data.attackInterval;
             }
@@ -555,7 +616,14 @@ namespace BiuBiu.Enemies
             if (hitFlash != null) hitFlash.PlayFlash(0.15f);
             UpdateHealthBar();
 
-            if (health <= 0f) Die();
+            if (health <= 0f)
+            {
+                Die();
+                return;
+            }
+
+            // 受击气泡（设计文档 14.x；血未尽才冒，避免与死亡气泡重复）
+            SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Hit);
         }
 
         /// <summary>击碎（三级弹丸满蓄力命中）：直接死亡，无尸体，留扇形血迹</summary>
@@ -638,7 +706,13 @@ namespace BiuBiu.Enemies
         /// <summary>死亡：计数+血迹+尸体留存（灰盒压扁渐隐）；精英/Boss 触发 hitstop+击杀演出</summary>
         private void Die()
         {
-            // 击杀计数与大蜘蛛标记（成就「蛛网突围」数据源）
+            // 销毁独立常驻球（不随父级回收，必须手动清，避免泄漏/尸体残留）
+            if (carryBall != null) { Destroy(carryBall.gameObject); carryBall = null; }
+
+            // 死亡气泡（设计文档 14.x；尸体留存协程期间 transform 仍有效， 气泡可显示）
+            if (data != null) SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Death);
+
+            // 击杀计数与 Boss 标记（成就「蛛网突围」数据源）
             GameBootstrap.Instance?.NotifyEnemyKilled(IsBoss);
 
             // 地面血迹×3（增加血迹量）
@@ -646,7 +720,7 @@ namespace BiuBiu.Enemies
             DropManager.Instance?.SpawnStain(transform.position + (Vector3)(Random.insideUnitCircle * 0.4f), data.bodySize.x * 0.7f);
             DropManager.Instance?.SpawnStain(transform.position + (Vector3)(Random.insideUnitCircle * 0.6f), data.bodySize.x * 0.5f);
 
-            // 精英/大蜘蛛击杀演出：hitstop 0.12s + 强震屏（数值文档 9 章）
+            // 精英/Boss 击杀演出：hitstop 0.12s + 强震屏（数值文档 9 章）
             if (data.enemyType != EnemyType.Normal)
             {
                 if (CameraTrauma.Instance != null)

@@ -1,5 +1,6 @@
 using BiuBiu.Core;
 using BiuBiu.Enemies;
+using BiuBiu.VFX;
 using UnityEngine;
 
 namespace BiuBiu.Weapons
@@ -21,6 +22,7 @@ namespace BiuBiu.Weapons
         private bool shatter;
         private float lifeTimer;
         private SpriteRenderer sr;
+        private TrailRenderer trail;
 
         // 弹丸档位颜色（与数值文档 4.1 三档对应；零级为不透明白，区别于蓄力 orb 的半透白）
         private static readonly Color[] levelColors = {
@@ -40,6 +42,16 @@ namespace BiuBiu.Weapons
                     template = new GameObject("PlayerProjectileTemplate");
                     template.AddComponent<SpriteRenderer>();
                     template.AddComponent<PlayerProjectile>();
+
+                    // 拖尾子物体（AGENTS 已知坑：同物体禁多 LineRenderer/TrailRenderer，用子物体承载）
+                    var trailGo = new GameObject("Trail");
+                    trailGo.transform.SetParent(template.transform, false);
+                    var tr = trailGo.AddComponent<TrailRenderer>();
+                    // 内置 Sprites/Default 材质（透明度混合，2D 像素风可用）；无材质则 TrailRenderer 不渲染
+                    tr.material = new Material(Shader.Find("Sprites/Default"));
+                    tr.sortingLayerName = "Effects"; // 与破碎碎片同层（工程约定特效层），避免落在 Default 层不显示
+                    tr.sortingOrder = 18;            // 略低于弹丸本体(20)，拖尾在弹丸下方
+                    tr.enabled = false;          // 默认禁用，Launch 时启用并配置
                     template.SetActive(false);
                     Object.DontDestroyOnLoad(template);
                 }
@@ -50,6 +62,17 @@ namespace BiuBiu.Weapons
         private void Awake()
         {
             sr = GetComponent<SpriteRenderer>();
+            trail = GetComponentInChildren<TrailRenderer>(true);
+        }
+
+        private void OnDisable()
+        {
+            // 回池（SetActive(false)）时停用拖尾：停止记录+渲染，下次 Launch 再开
+            if (trail != null)
+            {
+                trail.emitting = false;
+                trail.enabled = false;
+            }
         }
 
         public void Launch(Vector2 dir, int level, int dmg, float knockback, bool shatterEnemy)
@@ -70,10 +93,28 @@ namespace BiuBiu.Weapons
                 sr.color = levelColors[level];
             }
             transform.localScale = Vector3.one * GameBalance.ProjectileRadius * 2f;
+
+            // ---- 弹丸拖尾（三档差异：长度/粗细/余晖，颜色复用档位色） ----
+            if (trail != null)
+            {
+                trail.enabled = true;        // 关键：模板默认禁用，必须启用组件才会记录+渲染
+                trail.sortingLayerName = "Effects";
+                trail.sortingOrder = 18;
+                trail.Clear(); // 池复用：清掉上一发残留轨迹
+                Color c = levelColors[level];
+                float endA = GameBalance.ProjectileTrailEndAlpha[level];
+                trail.startColor = new Color(c.r, c.g, c.b, 1f);
+                trail.endColor = new Color(c.r, c.g, c.b, endA);
+                trail.time = GameBalance.ProjectileTrailTime[level];   // 尾巴长度
+                trail.widthMultiplier = GameBalance.ProjectileTrailWidth[level]; // 粗细（匹配弹丸直径）
+                trail.minVertexDistance = 0.03f; // 像素风：低采样保持利落
+                trail.emitting = true;
+            }
         }
 
         private void Update()
         {
+            if (trail != null && !trail.emitting) return; // 已回池/未发射：跳过运动（防御性）
             float dt = Time.deltaTime;
 
             Vector2 pos = transform.position;
@@ -118,6 +159,8 @@ namespace BiuBiu.Weapons
                 if (shatter)
                 {
                     // 二级：击碎敌人，弹丸穿透不消失
+                    // 破碎粒子爆发：先于 Shatter 取敌人主色与命中点，避免回池后引用失效
+                    BreakBurstManager.SpawnBreakBurst(pos, velocity, enemy.MainColor);
                     enemy.Shatter();
                     if (CameraTrauma.Instance != null)
                         CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);

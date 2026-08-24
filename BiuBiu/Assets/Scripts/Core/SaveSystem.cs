@@ -28,8 +28,8 @@ namespace BiuBiu.Core
     /// 跨局持久化（PlayerPrefs 轻量实现，无中途存档——设计文档 2.4：死亡即结算，重开零成本）。
     /// 承载两类数据：
     /// 1. 历史最佳（单局）：死亡战报「新纪录！」对比依据；
-    /// 2. 累计统计：成就·统计界面（总开局/累计击杀/累计存活/大蜘蛛击杀数）
-    ///    与成就五项判定（轮次 5 / 存活 600s / 击杀 500 / 击杀大蜘蛛 / 首次死亡）。
+    /// 2. 累计统计：成就·统计界面（总开局/累计击杀/累计存活/Boss 击杀数）
+    ///    与成就五项判定（轮次 5 / 存活 600s / 击杀 500 / 击杀 Boss / 首次死亡）。
     /// M1 只做数据存取；成就 UI 与统计界面展示在 M4 元游戏里程碑接入。
     /// v3.3：等级口径已改轮次（旧 BestLevel 键弃用，旧纪录不延续）。
     /// </summary>
@@ -60,7 +60,7 @@ namespace BiuBiu.Core
         /// <summary>累计存活总时长（秒，「累计存活 mm:ss」）</summary>
         public static float TotalSurvivalSeconds => PlayerPrefs.GetFloat(KeyPrefix + "TotalSurvivalSeconds", 0f);
 
-        /// <summary>累计击杀大蜘蛛只数（成就「蛛网突围」备用数据）</summary>
+        /// <summary>累计击杀 Boss 只数（成就「蛛网突围」备用数据）</summary>
         public static int TotalBossKills => PlayerPrefs.GetInt(KeyPrefix + "TotalBossKills", 0);
 
         /// <summary>是否死亡过至少一次（成就「摔了个跟头」：首次死亡）</summary>
@@ -79,7 +79,7 @@ namespace BiuBiu.Core
 
         /// <summary>
         /// 死亡结算：写入本局统计并对比历史最佳（GameBootstrap 死亡流程调用）。
-        /// 同时更新累计统计（击杀/存活/大蜘蛛/首次死亡标记）。
+        /// 同时更新累计统计（击杀/存活/Boss/首次死亡标记）。
         /// </summary>
         /// <param name="run">本局统计</param>
         /// <returns>战报（含三项是否破纪录，供战报 UI 加「新纪录！」后缀）</returns>

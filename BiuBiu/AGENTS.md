@@ -16,10 +16,10 @@
 ## 目录结构
 
 - `Assets/Scripts/{Core,Player,Weapons,Enemies,Drops,UI,Data,Editor}/` — 按模块划分；项目自身无 asmdef
-- `Assets/Art/` — 自产美术（Sprites/Spine/Tilemaps/UI/VFX/Shaders）
+- `Assets/UI/` — 预留 UI 资产（当前空，灰盒 HUD 为程序化/OnGUI 绘制）
 - `Assets/Resources/Data/Enemies/` — EnemyData SO 实例（Resources 兜底加载）
-- `Assets/Spine/`、`Assets/Spine Examples/` — spine-unity 4.3 第三方运行时与示例，**勿混入自产资产**
-- `Docs/`、`Tools/`（含 `AssetQC.py` 素材质检脚本）
+- `Assets/Audio/` — 预留音频资产（待接入，空目录）
+- `Docs/`（中文策划文档：设计/开发/数值）
 
 ## 关键架构约定
 
@@ -31,7 +31,7 @@
 - 对象池：丧尸、弹丸、投掷物、血迹等全池化
 - 存档：单一永久档（PlayerPrefs，`Core/SaveSystem.cs`）=最高纪录（存活/轮次/击杀）+累计统计；无中途档
 - 局内进度口径=「轮次」（等级概念已退役）
-- 自定义 shader：`BiuBiu/SpriteFlash`、`BiuBiu/SpineSkeletonFlash`（受击闪白，用 MaterialPropertyBlock 写 `_FlashAmount`）
+- 自定义 shader：`BiuBiu/SpriteFlash`（受击闪白，用 MaterialPropertyBlock 写 `_FlashAmount`；Spine 路线已取消，无 Spine 专用 shader）
 - 排序层：地面(-10)→血迹(-5)→影子(-4)→角色(0)→特效(5)→UI
 
 ## 构建与运行
@@ -55,5 +55,3 @@
 - 团结引擎场景扩展名历史上为 `.scene`，但当前仓库实际是 `.unity`（Boot.unity/Main.unity）——以文件系统实际为准
 - 团结引擎同物体禁多个 LineRenderer（多段视觉各用子物体承载）
 - Play 热重载会清空普通 C# 对象引用——外部引用一律判 null 惰性自愈（工程纪律，见 GameBootstrap/PlayerController）
-- spine-unity 相关 asmdef（spine-csharp 等）是第三方的，不要改
-- spine-unity 4.3 编辑器代码实例化骨架会抛 NRE：走「示例场景 Additive 打开 + Instantiate」路线
