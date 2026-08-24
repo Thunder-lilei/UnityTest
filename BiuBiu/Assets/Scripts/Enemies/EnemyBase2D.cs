@@ -645,6 +645,9 @@ namespace BiuBiu.Enemies
             if (CameraTrauma.Instance != null)
                 CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);
 
+            // 击碎音效（红档满蓄力专属爆裂音，与普通死亡音 enemy_death 区分）
+            AudioManager.Play("enemy_shatter");
+
             // 直接回池（无尸体）
             ObjectPool.Release(gameObject);
         }
