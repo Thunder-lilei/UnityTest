@@ -168,7 +168,7 @@ namespace BiuBiu.Enemies
             }
         }
 
-        /// <summary>EnemyType → SpeakerType（气泡文案池对齐用；按敌人类型区分精英/Boss/各丧尸）</summary>
+        /// <summary>EnemyType → SpeakerType（气泡文案池对齐用；按敌人类型区分精英/Boss/各敌人）</summary>
         private static SpeakerType ToSpeaker(EnemyData enemyData)
         {
             switch (enemyData.enemyType)
@@ -180,7 +180,7 @@ namespace BiuBiu.Enemies
             {
                 case EnemyAttackType.RangedLine: return SpeakerType.Ranged;
                 case EnemyAttackType.ArcSweep: return SpeakerType.MeleeSweep;
-                default: return SpeakerType.Melee;
+                default: return SpeakerType.Ranged;
             }
         }
 
@@ -199,7 +199,7 @@ namespace BiuBiu.Enemies
             {
                 case EnemyType.Elite: return new Color(0.6f, 0.2f, 0.8f);   // 紫
                 case EnemyType.Boss: return new Color(0.25f, 0.1f, 0.1f);  // 暗红黑
-                default: return new Color(0.4f, 0.55f, 0.35f);             // 丧尸绿
+                default: return new Color(0.4f, 0.55f, 0.35f);             // 敌人绿
             }
         }
 
@@ -299,12 +299,12 @@ namespace BiuBiu.Enemies
                 return;
             }
 
-            // ---- 进入射程 → 攻击前摇（蓄力时间减半） ----
+            // ---- 进入射程 → 攻击前摇 ----
             // 触发距离比实际攻击范围大，让敌人走到近身才出手
             if (dist <= data.attackRange)
             {
                 state = State.Windup;
-                stateTimer = data.windupTime * 0.5f; // 蓄力时间减半
+                stateTimer = data.windupTime;
                 rb.velocity = Vector2.zero;
                 return;
             }
@@ -320,13 +320,12 @@ namespace BiuBiu.Enemies
         /// <summary>前摇：扇形空心框逐渐变红蓄力；填满后出手</summary>
         private void WindupUpdate(PlayerController player, float dist)
         {
-            // 蓄力时间减半
-            float effectiveWindup = data.windupTime * 0.5f;
+            float effectiveWindup = data.windupTime;
             stateTimer -= Time.deltaTime;
             float progress = 1f - Mathf.Clamp01(stateTimer / effectiveWindup);
 
             // 近战类型：显示扇形蓄力指示器（空心框逐渐变红）
-            if (data.attackType == EnemyAttackType.MeleeSingle || data.attackType == EnemyAttackType.ArcSweep)
+            if (data.attackType == EnemyAttackType.ArcSweep)
             {
                 ShowWindupArc(player, progress);
             }
@@ -381,14 +380,6 @@ namespace BiuBiu.Enemies
 
             switch (data.attackType)
             {
-                case EnemyAttackType.MeleeSingle:
-                    if (distToPlayer <= hitRange
-                        && Vector2.Angle(aimDir, toPlayer) <= hitArc)
-                    {
-                        player.TakeDamage(data.damage);
-                    }
-                    break;
-
                 case EnemyAttackType.RangedLine:
                     FireProjectile(toPlayer.normalized);
                     break;
@@ -608,12 +599,11 @@ namespace BiuBiu.Enemies
 
         // ==================== 受击/死亡 ====================
 
-        /// <summary>IDamageable：扣血+闪白；血尽死亡</summary>
+        /// <summary>IDamageable：扣血；血尽走终结演出（Die/Shatter），未击杀才触发受击闪白</summary>
         public void TakeDamage(int amount)
         {
             if (data == null || amount <= 0) return;
             health -= amount;
-            if (hitFlash != null) hitFlash.PlayFlash(0.15f);
             UpdateHealthBar();
 
             if (health <= 0f)
@@ -621,6 +611,9 @@ namespace BiuBiu.Enemies
                 Die();
                 return;
             }
+
+            // 仅未击杀才闪白（击杀走 Die/Shatter 的终结演出，无需闪白）
+            if (hitFlash != null) hitFlash.PlayFlash(0.15f);
 
             // 受击气泡（设计文档 14.x；血未尽才冒，避免与死亡气泡重复）
             SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Hit);
@@ -630,6 +623,9 @@ namespace BiuBiu.Enemies
         public void Shatter()
         {
             if (data == null) return;
+
+            // 死前隐藏蓄力扇形框（避免蓄力中被击杀时残留）
+            HideWindupArc();
 
             // 击杀计数
             GameBootstrap.Instance?.NotifyEnemyKilled(IsBoss);
@@ -706,6 +702,9 @@ namespace BiuBiu.Enemies
         /// <summary>死亡：计数+血迹+尸体留存（灰盒压扁渐隐）；精英/Boss 触发 hitstop+击杀演出</summary>
         private void Die()
         {
+            // 死前隐藏蓄力扇形框（避免蓄力中被击杀时残留）
+            HideWindupArc();
+
             // 销毁独立常驻球（不随父级回收，必须手动清，避免泄漏/尸体残留）
             if (carryBall != null) { Destroy(carryBall.gameObject); carryBall = null; }
 

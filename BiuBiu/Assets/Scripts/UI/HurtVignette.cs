@@ -88,7 +88,7 @@ namespace BiuBiu.UI
             }
         }
 
-        /// <summary>残血常驻红晕：当前血量 ≤ 阈值且未死亡时返回常驻 alpha，否则 0</summary>
+        /// <summary>残血常驻红晕：当前血量 ≤ 阈值且未死亡时返回常驻 alpha（带呼吸脉动），否则 0</summary>
         private float LowHealthBaseAlpha()
         {
             if (player == null) player = FindObjectOfType<BiuBiu.Player.PlayerController>();
@@ -96,9 +96,12 @@ namespace BiuBiu.UI
 
             int hp = player.CurrentHealth;
             if (hp <= 0) return 0f; // 死亡不显示常驻红晕
-            return hp <= GameBalance.HurtVignetteLowHealthThreshold
-                ? GameBalance.HurtVignetteLowHealthAlpha
-                : 0f;
+            if (hp > GameBalance.HurtVignetteLowHealthThreshold) return 0f;
+
+            // 残血脉动：边缘红晕围绕基础值做正弦呼吸（越残血越紧迫），不依赖受击闪现
+            float baseA = GameBalance.HurtVignetteLowHealthAlpha;
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.PI * 2f * GameBalance.HurtVignettePulseSpeed);
+            return baseA * (1f + GameBalance.HurtVignettePulseAmount * (pulse * 2f - 1f)); // 围绕 baseA 上下浮动 ±PulseAmount
         }
 
         /// <summary>

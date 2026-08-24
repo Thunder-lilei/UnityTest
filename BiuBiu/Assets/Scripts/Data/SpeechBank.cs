@@ -7,7 +7,6 @@ namespace BiuBiu.Data
     public enum SpeakerType
     {
         Player,
-        Melee,       // 近战（扇形型）
         Ranged,      // 远程（直线弹）
         MeleeSweep,  // 近战（横扫型）
         Elite,       // 精英

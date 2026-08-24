@@ -13,7 +13,6 @@ namespace BiuBiu.Data
     /// <summary>普通敌人攻击方式（数值文档 5.1「攻击」列）</summary>
     public enum EnemyAttackType
     {
-        MeleeSingle, // 近战单点（近战扇形型：贴身判定）
         RangedLine,  // 远程直线（远程：直线弹丸）
         ArcSweep     // 范围横扫（近战横扫型 120°/半径 2.0；精英横扫 120°/半径 2.5）
     }
@@ -28,7 +27,7 @@ namespace BiuBiu.Data
     public class EnemyData : ScriptableObject
     {
         [Header("标识")]
-        [Tooltip("配置标识（melee / ranged / melee_sweep / elite / boss），代码与文档引用键")]
+        [Tooltip("配置标识（ranged / melee_sweep / elite / boss），代码与文档引用键")]
         public string enemyId;
 
         [Tooltip("显示名（Hierarchy 可读性与提示文案用）")]

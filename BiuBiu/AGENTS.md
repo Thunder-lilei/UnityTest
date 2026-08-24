@@ -1,6 +1,6 @@
 # AGENTS.md — BiuBiu 工作区须知
 
-2D 像素风俯视角**幸存者类街机动作**（大地图波次刷怪、弹弓蓄力、每轮自动变强）。**团结引擎 TuanjieEditor 1.9.3**（内核 2022.3.62t11，C#/包体系兼容 Unity 生态），Built-in 管线，目标平台 Windows PC，PPU=32，正交相机 Size=9，Input System（支持运行时改键）。当前阶段：M1/M2 已完成（v3.0 战斗重构+旧设计清理完毕，2026-08-23），下一步 M3 系统扩展（大蜘蛛/精英/三丧尸差异化的灰盒表现——Spine 接入路线已取消，2026-08-23）。
+2D 像素风俯视角**幸存者类街机动作**（大地图波次刷怪、弹弓蓄力、每轮自动变强）。**团结引擎 TuanjieEditor 1.9.3**（内核 2022.3.62t11，C#/包体系兼容 Unity 生态），Built-in 管线，目标平台 Windows PC，PPU=32，正交相机 Size=9，Input System（支持运行时改键）。当前阶段：M1/M2 已完成（v3.0 战斗重构+旧设计清理完毕，2026-08-23），下一步 M3 系统扩展（大蜘蛛/精英/三敌人差异化的灰盒表现——Spine 接入路线已取消，2026-08-23）。
 
 ## 必读文档（改代码前先改文档）
 
@@ -28,7 +28,7 @@
 - 数据驱动：敌人用 `EnemyData` ScriptableObject（`Data/EnemyData.cs` + Resources 实例）
 - 唯一武器=弹弓蓄力（`Weapons/SlingWeapon.cs` 三档蓄力：白速射/黄击飞/红击碎穿透，`PlayerProjectile.cs`）
 - 波次制刷怪（`EnemySpawner2D`：1→2→4→8 翻倍；每轮全灭→PlayerStats 微增+回满血）；**无经验/升级/血瓶/掉落拾取**（2026-08-23 已清理）
-- 对象池：丧尸、弹丸、投掷物、血迹等全池化
+- 对象池：敌人、弹丸、投掷物、血迹等全池化
 - 存档：单一永久档（PlayerPrefs，`Core/SaveSystem.cs`）=最高纪录（存活/轮次/击杀）+累计统计；无中途档
 - 局内进度口径=「轮次」（等级概念已退役）
 - 自定义 shader：`BiuBiu/SpriteFlash`（受击闪白，用 MaterialPropertyBlock 写 `_FlashAmount`；Spine 路线已取消，无 Spine 专用 shader）

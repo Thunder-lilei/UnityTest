@@ -24,10 +24,27 @@ namespace BiuBiu.Core
         private float flashTimer = -1f;    // 当前闪白剩余时间；<0 表示空闲
         private bool isOn;                 // 方波当前相位（true=显示闪白色）
 
-        /// <summary>组件初始化：缓存渲染器与属性 ID</summary>
+        /// <summary>共享的 SpriteFlash 材质（运行时从 SpriteFlash.shader 创建，避免依赖 Inspector 填写资产）</summary>
+        private static Material s_flashMaterial;
+
+        /// <summary>组件初始化：缓存渲染器与属性 ID，并确保目标材质支持 _FlashAmount（否则闪白不生效）</summary>
         private void Awake()
         {
             targetRenderer = GetComponent<Renderer>();
+
+            // 关键修复：默认材质（Sprites/Default）不含 _FlashAmount 属性，MPB 写入会被静默忽略导致闪白不可见。
+            // 统一替换为运行时创建的 SpriteFlash 材质（共享实例），玩家/敌人/可破坏物均自动生效。
+            if (targetRenderer != null)
+            {
+                if (s_flashMaterial == null)
+                {
+                    var sha = Shader.Find("Biubiu/SpriteFlash");
+                    if (sha != null) s_flashMaterial = new Material(sha);
+                }
+                if (s_flashMaterial != null)
+                    targetRenderer.material = s_flashMaterial;
+            }
+
             mpb = new MaterialPropertyBlock();
             flashAmountId = Shader.PropertyToID("_FlashAmount");
             flashColorId = Shader.PropertyToID("_FlashColor");

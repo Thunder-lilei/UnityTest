@@ -21,8 +21,8 @@ MonoBehaviour:
   damage: 1
   expOrbCount: 3
   bodySize: {x: 1, y: 1}
-  attackType: 2
-  windupTime: 0.5
+  attackType: 1
+  windupTime: 0.9
   attackInterval: 1.5
   attackRange: 2
   sweepAngle: 120

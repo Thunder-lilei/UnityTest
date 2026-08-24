@@ -39,6 +39,7 @@ namespace BiuBiu.Player
         private float recoilTimer;        // 后坐力剩余回弹时长（>0 = 回弹中）
         private Vector2 recoilDir;        // 后坐力方向（瞄准反方向，单位向量）
         private float recoilTotal;        // 本次后坐力峰值位移（tile）
+        private Vector3 recoilStartPos;   // 后坐力起点（sin 包络回弹基准）
 
         // ---- 翻滚残影（M2：位置残影序列替代 alpha 闪烁）----
         private float afterimageTimer;
@@ -61,6 +62,7 @@ namespace BiuBiu.Player
         {
             sr = GetComponent<SpriteRenderer>();
             hitFlash = GetComponent<HitFlash>();
+            Rb = GetComponent<Rigidbody2D>();
             mainCam = Camera.main;
             trauma = mainCam != null ? mainCam.GetComponent<CameraTrauma>() : null;
             health = GameBalance.PlayerMaxHealth;
@@ -155,14 +157,9 @@ namespace BiuBiu.Player
                 float sPrev = Mathf.SmoothStep(0f, 1f, 1f - remainPrev);
                 float sNow = Mathf.SmoothStep(0f, 1f, 1f - remainNow);
                 float delta = (sNow - sPrev) * rollDist; // 本帧位移量（恒为正）
-                // 翻滚位移也做碰撞检测（分轴推进，防卡进墙）
-                Vector3 rollPos = transform.position;
-                Vector3 rollDelta = (Vector3)(rollDir * delta);
-                rollPos.x += rollDelta.x;
-                if (IsBlocked(rollPos)) rollPos.x -= rollDelta.x;
-                rollPos.y += rollDelta.y;
-                if (IsBlocked(rollPos)) rollPos.y -= rollDelta.y;
-                transform.position = rollPos;
+                // 翻滚位移：用刚体 velocity 驱动（瞬时速度 = 本帧位移/dt），物理引擎撞墙自动阻挡
+                float rollSpeed = delta / Time.deltaTime;
+                if (Rb != null) Rb.velocity = rollDir * rollSpeed;
 
                 // 翻滚残影：按间隔留位置残影（M2 替代旧 alpha 闪烁）
                 afterimageTimer -= Time.deltaTime;
@@ -181,12 +178,36 @@ namespace BiuBiu.Player
                         end.a = 1f;
                         sr.color = end;
                     }
+                    // 翻滚结束清零速度，避免最后一帧的速度残留导致滑行
+                    if (Rb != null) Rb.velocity = Vector2.zero;
                 }
                 return; // 翻滚期间锁移动输入
             }
 
-            // ---- 蓄力时冻结常规移动（由 SlingWeapon 拉拽控制位置） ----
-            if (Weapons.SlingWeapon.IsCharging) return;
+            // ---- 发射后坐力：沿瞄准反方向短促冲出后缓回原点（cos 速度包络：先冲后拉，撞墙物理引擎阻挡） ----
+            // 后坐力优先于移动：recoil 期间跳过移动输入，避免移动 velocity 覆盖 recoil velocity
+            if (recoilTimer > 0f)
+            {
+                recoilTimer -= Time.deltaTime;
+                // sin 位移包络：t=0 在原点、t=0.5 冲到最远、t=1 回到原点（先冲后回）
+                float t = 1f - Mathf.Clamp01(recoilTimer / GameBalance.PlayerRecoilDuration);
+                float env = Mathf.Sin(t * Mathf.PI); // 0→1→0
+                // 位置基准：从 recoil 起点沿反方向位移 env * recoilTotal；用 MovePosition 让物理引擎处理撞墙阻挡
+                Vector3 target = recoilStartPos + (Vector3)(recoilDir * (recoilTotal * env));
+                if (Rb != null)
+                {
+                    Rb.velocity = Vector2.zero; // 清零速度，避免物理引擎用残留 velocity 移动覆盖 MovePosition 目标
+                    Rb.MovePosition(target);
+                }
+                return;
+            }
+
+            // ---- 蓄力时冻结常规移动（由 SlingWeapon 拉拽控制 velocity） ----
+            if (Weapons.SlingWeapon.IsCharging)
+            {
+                // 蓄力期间移动输入不生效；velocity 由 SlingWeapon 蓄力拉拽控制
+                return;
+            }
 
             // ---- 常规移动（移速 = 基础 × 每轮微增乘数） ----
             float moveSpeed = stats != null ? stats.CurrentMoveSpeed : GameBalance.PlayerMoveSpeed;
@@ -194,32 +215,13 @@ namespace BiuBiu.Player
             if (move.sqrMagnitude > 0.01f)
             {
                 lastMoveDir = move.normalized;
-                Vector3 delta = (Vector3)(move.normalized * (moveSpeed * Time.deltaTime));
-                // 碰撞检测：分轴推进，遇障碍墙/边界墙阻挡
-                Vector3 pos = transform.position;
-                // X 轴
-                pos.x += delta.x;
-                if (IsBlocked(pos)) pos.x -= delta.x;
-                // Y 轴
-                pos.y += delta.y;
-                if (IsBlocked(pos)) pos.y -= delta.y;
-                transform.position = pos;
+                // 用刚体 velocity 驱动移动：物理引擎每物理步按此速度位移，与墙碰撞自动阻挡（撞墙沿切向滑动）
+                if (Rb != null) Rb.velocity = move.normalized * moveSpeed;
             }
-
-            // ---- 发射后坐力：沿瞄准反方向短促冲出后缓回原点（不破坏走位；翻滚期已在上方 return 跳过） ----
-            if (recoilTimer > 0f)
+            else if (Rb != null)
             {
-                recoilTimer -= Time.deltaTime;
-                // 进度 0→1 的脉冲：前半冲出、后半缓回（SmoothStep 对称）
-                float t = 1f - Mathf.Clamp01(recoilTimer / GameBalance.PlayerRecoilDuration);
-                float env = Mathf.Sin(t * Mathf.PI); // 0→1→0 的正弦包络，峰值在中点
-                Vector3 recoilDelta = (Vector3)(recoilDir * (recoilTotal * env));
-                Vector3 rpos = transform.position;
-                rpos.x += recoilDelta.x;
-                if (!IsBlocked(rpos)) transform.position = rpos; // 防卡墙：受阻则放弃该轴推进
-                rpos = transform.position;
-                rpos.y += recoilDelta.y;
-                if (!IsBlocked(rpos)) transform.position = rpos;
+                // 无移动输入：清零速度防滑行
+                Rb.velocity = Vector2.zero;
             }
 
             // ---- 翻滚触发（周期结束才可再次触发=自然限频） ----
@@ -227,6 +229,7 @@ namespace BiuBiu.Player
             {
                 rollTimer = GameBalance.RollDuration;
                 rollDir = move.sqrMagnitude > 0.01f ? move.normalized : lastMoveDir;
+                AudioManager.Play("dodge"); // 闪避/翻滚音效（瞬移感，与武器能量风同族）
             }
 
             // ---- 开发者模式无敌开关（M0-8；正式版移入设置界面） ----
@@ -237,13 +240,8 @@ namespace BiuBiu.Player
             }
         }
 
-        /// <summary>碰撞检测：玩家圆形与障碍墙/边界墙的 BoxCollider2D 重叠判定</summary>
-        private bool IsBlocked(Vector3 pos)
-        {
-            float r = GameBalance.PlayerCollisionRadius;
-            var hit = Physics2D.OverlapCircle(pos, r);
-            return hit != null && hit is BoxCollider2D;
-        }
+        /// <summary>刚体（移动由 velocity 驱动，物理引擎与墙碰撞阻挡）</summary>
+        public Rigidbody2D Rb { get; private set; }
 
         /// <summary>发射后坐力触发（SlingWeapon.Fire 调用）：沿瞄准反方向短促回弹，幅度按蓄力档位递增</summary>
         /// <param name="aimDir">瞄准方向（单位向量）；后坐力取其反方向</param>
@@ -255,6 +253,7 @@ namespace BiuBiu.Player
             recoilDir = (-aimDir).normalized;
             recoilTotal = GameBalance.PlayerRecoilDistance[level];
             recoilTimer = GameBalance.PlayerRecoilDuration;
+            recoilStartPos = transform.position; // 记录起点，sin 包络从原点冲出再回弹到原点
         }
 
         /// <summary>回复治疗（每轮结束回满血调用；EnemySpawner2D.ApplyRoundBonus）</summary>

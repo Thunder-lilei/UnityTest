@@ -21,7 +21,7 @@ MonoBehaviour:
   damage: 1
   expOrbCount: 2
   bodySize: {x: 0.66, y: 1}
-  attackType: 1
+  attackType: 0
   windupTime: 0.6
   attackInterval: 2
   attackRange: 6

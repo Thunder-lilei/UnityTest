@@ -70,7 +70,6 @@ namespace BiuBiu.Enemies
             {
                 normalEnemies = new[]
                 {
-                    Resources.Load<EnemyData>(ResPath + "Enemy_Melee"),
                     Resources.Load<EnemyData>(ResPath + "Enemy_Ranged"),
                     Resources.Load<EnemyData>(ResPath + "Enemy_MeleeSweep")
                 };
@@ -314,6 +313,7 @@ namespace BiuBiu.Enemies
         private static GameObject BuildGreyEnemy<T>(string name) where T : EnemyBase2D
         {
             var go = new GameObject(name);
+            go.layer = GameBalance.LayerEnemy; // 敌人层：与玩家墙层 Ignore，使玩家可穿敌群
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = GreyBoxFactory.Square; // 白方（Initialize 时按类型染色+体型缩放）
             go.AddComponent<T>();

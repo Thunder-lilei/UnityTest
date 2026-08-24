@@ -41,7 +41,7 @@ namespace BiuBiu.Core
 
             _loopSource = gameObject.AddComponent<AudioSource>();
             _loopSource.playOnAwake = false;
-            _loopSource.loop = true; // 持续音轨迹默认循环，由 StopLoop 显式停止
+            _loopSource.loop = false; // 持续音轨迹不循环：只播一次，满蓄力后自然停止；松手/中断由 StopLoop 截断
         }
 
         /// <summary>确保全局单例存在（直接 Play 调试或热重载后自愈用）</summary>
@@ -86,7 +86,7 @@ namespace BiuBiu.Core
             // 蓄力音音量单独下调至默认的 2/3（仅作用于持续音轨，不影响其他一次性音效）
             mgr._loopSource.volume = 0.666f;
             mgr._loopSource.clip = clip;
-            mgr._loopSource.loop = true;
+            mgr._loopSource.loop = false; // 不循环：一次性渐强到峰值，满蓄力后不再重复播放
             mgr._loopSource.Play();
         }
 

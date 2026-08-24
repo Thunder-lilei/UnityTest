@@ -101,21 +101,22 @@ namespace BiuBiu.Weapons
                 chargeOrb.transform.localScale = Vector3.one * orbSize;
                 chargeOrb.color = levelColors[chargeLevel];
 
-                // 蓄力拉拽动作：玩家向瞄准反方向缓慢后退，但总位移封顶（基于蓄力起点），
-                // 避免长按无限倒退、也避免松手时已有过大偏移显得突兀
+                // 蓄力拉拽动作：玩家向瞄准反方向缓慢后退（velocity 驱动，物理引擎挡墙），总位移封顶避免长按倒退过远
                 if (chargeLevel > 0)
                 {
-                    Vector2 target = (Vector2)playerOriginalPos - aimDir * GameBalance.ChargeMaxPullback;
-                    // 仅在未超过封顶距离时朝目标推进（每帧小幅逼近，手感平滑）
                     Vector2 cur = transform.position;
                     if (Vector2.Distance(cur, playerOriginalPos) < GameBalance.ChargeMaxPullback - 0.001f)
                     {
                         float pullSpeed = 0.5f + chargeLevel * 0.5f; // 一级1.0/二级1.5 tile/s
-                        Vector3 pullBack = (Vector3)((-aimDir * pullSpeed * Time.deltaTime));
-                        Vector3 np = transform.position + pullBack;
-                        // 不超过封顶目标点
-                        if (Vector2.Distance((Vector2)np, playerOriginalPos) <= GameBalance.ChargeMaxPullback)
-                            transform.position = np;
+                        // 通过玩家刚体 velocity 推进反向位移（物理引擎自动与墙碰撞阻挡）
+                        var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+                        if (pc != null && pc.Rb != null) pc.Rb.velocity = -aimDir * pullSpeed;
+                    }
+                    else
+                    {
+                        // 已达封顶距离：停住不再后退
+                        var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+                        if (pc != null && pc.Rb != null) pc.Rb.velocity = Vector2.zero;
                     }
                 }
             }
@@ -162,6 +163,11 @@ namespace BiuBiu.Weapons
             // 发射后坐力：沿瞄准反方向短促回弹，幅度随蓄力档位递增（PlayerController 接管位移）
             var player = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
             if (player != null) player.ApplyRecoil(aimDir, level);
+
+            // 三色发射音：按蓄力档位播放（蓄力持续音已由 CancelCharge 的 StopLoop 终止，此处接续）
+            // level: 0=白速射 / 1=黄 / 2=红满蓄
+            string fireClip = level >= 2 ? "laser_fire_red" : (level == 1 ? "laser_fire_yellow" : "laser_fire_white");
+            AudioManager.Play(fireClip);
         }
     }
 }

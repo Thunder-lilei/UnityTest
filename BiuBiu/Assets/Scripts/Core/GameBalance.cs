@@ -35,6 +35,8 @@ namespace BiuBiu.Core
         public const float HurtVignettePeakAlpha = 0.6f;      // 红边峰值 alpha 上限（0~1）：多受击 clamp 不爆表
         public const int HurtVignetteLowHealthThreshold = 1;  // 残血阈值（心）：当前血量 ≤ 此值时红晕常驻
         public const float HurtVignetteLowHealthAlpha = 0.18f;// 残血常驻 alpha（0~1）：轻微持续红晕强度
+        public const float HurtVignettePulseSpeed = 0.6f;      // 残血红晕脉动频率（Hz）：边缘红晕呼吸感，越残血越紧迫
+        public const float HurtVignettePulseAmount = 0.4f;     // 残血红晕脉动幅度（比例）：常驻 alpha 上下浮动 ±40%
 
         /// <summary>翻滚无敌时长（秒，动作周期前段）</summary>
         public const float RollInvulnTime = 0.30f;
@@ -45,14 +47,25 @@ namespace BiuBiu.Core
         /// <summary>翻滚位移距离（tile，位移曲线缓入缓出）</summary>
         public const float RollDistance = 2.5f;
 
-        /// <summary>发射后坐力：各蓄力档位的反向位移幅度（tile，沿瞄准反方向瞬时冲出后缓回）。三档递增——绷得越满弹得越狠；零级极微保留连续射击节奏感，不干扰走位</summary>
-        public static readonly float[] PlayerRecoilDistance = { 0.01f, 0.024f, 0.044f };
+        /// <summary>发射后坐力：各蓄力档位的反向位移幅度（tile，沿瞄准反方向 sin 包络冲出再回弹）。三档递增——绷得越满弹得越狠；零级极微保留连续射击节奏感，不干扰走位</summary>
+        public static readonly float[] PlayerRecoilDistance = { 0.15f, 0.35f, 0.6f };
 
         /// <summary>发射后坐力回弹总时长（秒）：冲出→缓回原点的周期，短时不影响走位</summary>
         public const float PlayerRecoilDuration = 0.12f;
 
         /// <summary>玩家圆形碰撞半径（tile）</summary>
         public const float PlayerCollisionRadius = 0.4f;
+
+        /// <summary>玩家刚体线性阻力（velocity 衰减系数）：让后坐力脉冲冲出后自然减速归零；移动每帧重设 velocity 故不受此影响</summary>
+        public const float PlayerLinearDrag = 12f;
+
+        // ==================== 物理层（碰撞矩阵默认全开，仅在代码里按需 Ignore） ====================
+        /// <summary>玩家实体碰撞体层（用于被墙/障碍阻挡；与敌层 Ignore 以保留"穿敌群"手感）</summary>
+        public const int LayerPlayerWall = 8;
+        /// <summary>玩家受击触发器层（与敌接触触发伤害；不参与物理阻挡）</summary>
+        public const int LayerPlayerHurt = 10;
+        /// <summary>敌人层（与玩家墙层 Ignore 碰撞，使玩家可穿过敌群）</summary>
+        public const int LayerEnemy = 9;
 
         // ==================== 第 5 章 敌人数值（基础值；实际值经第 6 章成长公式） ====================
         // 基础值落在 EnemyData ScriptableObject（数据驱动），此处只放公式与通用参数。

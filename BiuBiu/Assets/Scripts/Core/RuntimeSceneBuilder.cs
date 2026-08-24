@@ -93,14 +93,30 @@ namespace BiuBiu.Core
 
             player.AddComponent<HitFlash>();
 
-            // 物理碰撞（主角与敌人可碰撞，碰撞受伤）
+            // ---- 刚体：Dynamic + velocity 驱动移动，物理引擎自然处理与墙的碰撞阻挡（撞墙自动停/滑，绝不卡绝不穿） ----
             var rb = player.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
-            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            var col = player.AddComponent<CircleCollider2D>();
-            col.radius = GameBalance.PlayerCollisionRadius;
-            col.isTrigger = true; // 触发器：不阻挡敌人移动，但触发碰撞事件
+            rb.bodyType = RigidbodyType2D.Dynamic; // Dynamic 才会被 Static 墙阻挡（Kinematic 会穿墙）
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous; // 防高速翻滚穿透薄墙
+            // 不开 Interpolate：Dynamic+velocity 每物理步连续位移，60Hz 已流畅；Interpolate 会引入渲染滞后
+            // 后坐力用 cos 速度包络（先冲后拉）实现回弹，不依赖 drag 衰减
+
+            // 受击触发器（LayerPlayerHurt）：与敌人接触触发伤害事件，但不参与物理阻挡（可穿敌群）
+            var hurtCol = player.AddComponent<CircleCollider2D>();
+            hurtCol.radius = GameBalance.PlayerCollisionRadius;
+            hurtCol.isTrigger = true;
+            player.layer = GameBalance.LayerPlayerHurt;
+
+            // 实体墙碰撞体（LayerPlayerWall，独立子物体以设置独立的层）：与墙/障碍物理碰撞，被阻挡
+            var wallChild = new GameObject("WallCollider");
+            wallChild.transform.SetParent(player.transform, false);
+            wallChild.layer = GameBalance.LayerPlayerWall;
+            var wallCol = wallChild.AddComponent<CircleCollider2D>();
+            wallCol.radius = GameBalance.PlayerCollisionRadius;
+
+            // 玩家墙层与敌层互不碰撞 → 保留"穿敌群"手感；仍与墙(Default层)碰撞被挡
+            Physics2D.IgnoreLayerCollision(GameBalance.LayerPlayerWall, GameBalance.LayerEnemy, true);
 
             // 输入与武器（弹弓蓄力武器）
             var controller = player.AddComponent<PlayerController>();
