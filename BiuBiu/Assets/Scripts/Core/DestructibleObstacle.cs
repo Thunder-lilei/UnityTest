@@ -38,19 +38,33 @@ namespace BiuBiu.Core
             Destroy(gameObject);
         }
 
-        /// <summary>生成建筑残骸（俄罗斯方块单元被击碎后留在原地的碎块）</summary>
+        /// <summary>生成建筑残骸：一簇随机小暗灰碎块（瓦砾堆，噪声感），可通行、不可再碎</summary>
         private void SpawnRubble(Vector3 pos)
         {
-            var rubble = GreyBoxFactory.MakeBox("ObstacleRubble", false, Color.white, Vector2.one * 0.7f);
-            rubble.transform.SetParent(Root != null ? Root : transform.parent, false);
-            rubble.transform.position = pos;
-            var sr = rubble.GetComponent<SpriteRenderer>();
-            if (sr != null)
+            var parent = Root != null ? Root : transform.parent;
+            int chunks = Random.Range(3, 6); // 3~5 块碎块拼成残骸
+            for (int i = 0; i < chunks; i++)
             {
-                sr.color = new Color(0.32f, 0.32f, 0.32f); // 暗灰残骸
-                sr.sortingOrder = 1;                       // 压地面、低于完整墙(2)
+                // 碎块尺寸 0.22~0.4，随机偏移在单元范围内，随机旋转
+                float s = Random.Range(0.22f, 0.4f);
+                float ox = Random.Range(-0.32f, 0.32f);
+                float oy = Random.Range(-0.32f, 0.32f);
+
+                var chunk = GreyBoxFactory.MakeBox($"Rubble_{i}", false, Color.white, Vector2.one * s);
+                chunk.transform.SetParent(parent, false);
+                chunk.transform.position = new Vector3(pos.x + ox, pos.y + oy, pos.z);
+                chunk.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+                var sr = chunk.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    // 暗灰基调 + 亮度抖动，形成噪声层次
+                    float v = Random.Range(0.22f, 0.42f);
+                    sr.color = new Color(v, v, v * 0.96f);
+                    sr.sortingOrder = 1; // 压地面、低于完整墙(2)
+                }
+                // 刻意不挂 Collider2D / DestructibleObstacle：残骸可通行、不可再碎
             }
-            // 刻意不挂 Collider2D / DestructibleObstacle：残骸可通行、不可再碎
         }
     }
 }
