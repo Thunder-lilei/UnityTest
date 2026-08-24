@@ -288,7 +288,7 @@ namespace BiuBiu.Core
         public const float BreakChunkSizeMax = 20f;
 
         // ==================== 大地图（设计文档 3.1 章） ====================
-        public const int MapSizeTiles = 108;
+        public const int MapSizeTiles = 80;
 
         // ==================== 第 12 章 地图障碍参数（数值文档 v2.4） ====================
 
