@@ -197,10 +197,13 @@ namespace BiuBiu.Weapons
                 {
                     // 二级 + 精英/Boss：不秒杀，走高额伤害（满蓄力也不该一击必杀硬核单位）
                     // 破碎粒子爆发保留击碎演出，但敌人走正常受伤/死亡路径
+                    // 弹丸命中后消散（不穿透），避免每帧叠加 TakeDamage 把精英/Boss 瞬间磨死
                     BreakBurstManager.SpawnBreakBurst(pos, velocity, enemy.MainColor);
                     enemy.TakeDamage(damage);
                     if (CameraTrauma.Instance != null)
                         CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);
+                    ObjectPool.Release(gameObject);
+                    return;
                 }
                 else
                 {
