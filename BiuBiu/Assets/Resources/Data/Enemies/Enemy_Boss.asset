@@ -48,6 +48,6 @@ MonoBehaviour:
   sweepBulletSpeed: 3
   bossChargeWindup: 0.6
   bossChargeSpeed: 8
-  bossChargeDistance: 6
+  bossChargeDistance: 18
   bossChargeCooldown: 6
   bossChargeKnockback: 1.5

@@ -114,9 +114,9 @@ namespace BiuBiu.Core
         public const float BossSweepRadius = 4.0f;
         public const float BossSweepAngle = 120f;
 
-        /// <summary>Boss 直线冲撞参数（tile/s、tile）</summary>
+        /// <summary>Boss 直线冲撞参数（tile/s、tile；冲撞距离 = 普通近战距离的 3 倍+）</summary>
         public const float BossChargeSpeed = 8.0f;
-        public const float BossChargeDistance = 6.0f;
+        public const float BossChargeDistance = 18.0f;
 
         /// <summary>Boss 八方向扇形横扫：每次朝 8 个米字方向各发一个扇形</summary>
         public const int BossSweepDirections = 8;

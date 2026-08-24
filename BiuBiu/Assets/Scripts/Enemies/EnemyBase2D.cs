@@ -796,7 +796,11 @@ namespace BiuBiu.Enemies
             float flattenY = GameBalance.CorpseFlattenScaleY;
             Vector3 origScale = transform.localScale;
             transform.localScale = new Vector3(origScale.x, origScale.y * flattenY, origScale.z);
-            if (sr != null) sr.color = GameBalance.CorpseTint;
+            // 尸体染色：精英/Boss 保留各自主色（紫/金）压暗；普通沿用统一绿尸色调
+            if (sr != null)
+                sr.color = (data != null && data.enemyType != EnemyType.Normal)
+                    ? MainColor * 0.6f
+                    : GameBalance.CorpseTint;
             if (sr != null) sr.sortingOrder = 5; // 尸体层在角色之下、地面之上
 
             // 入队 + 超限渐隐回池（防长局堆积）
