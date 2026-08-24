@@ -197,6 +197,9 @@ namespace BiuBiu.Core
         /// <summary>弹弓蓄力：二级（满）蓄力时长（秒，红色）</summary>
         public const float ChargeLevel2Time = 1.0f;
 
+        /// <summary>白色速射最小发射间隔（秒）：防止狂点刷爆，把白色 DPS 封顶到约 5~6，仍保留速射手感</summary>
+        public const float WhiteFireCooldown = 0.18f;
+
         /// <summary>蓄力弹丸视觉：起始距离（角色前方，tile，见数值文档第 9 章）</summary>
         public const float ChargeOrbStartDist = 0.5f;
 

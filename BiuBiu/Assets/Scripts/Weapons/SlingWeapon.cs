@@ -21,6 +21,9 @@ namespace BiuBiu.Weapons
         private float chargeTimer;
         private int chargeLevel; // 0=未蓄力, 1=黄色, 2=红色
 
+        // ---- 白色速射冷却（防止狂点刷爆 DPS；黄色/红色照常无此限制） ----
+        private float lastFireTime = -10f;
+
         /// <summary>是否正在蓄力（PlayerController 读取以冻结移动）</summary>
         public static bool IsCharging { get; private set; }
 
@@ -143,11 +146,16 @@ namespace BiuBiu.Weapons
         {
             int level = chargeLevel;
 
+            // 白色速射冷却：连点过快时吞掉本次发射，把 DPS 封顶（黄色/红色无此限制）
+            if (level == 0 && Time.time - lastFireTime < GameBalance.WhiteFireCooldown)
+                return;
+            lastFireTime = Time.time;
+
             // 每轮攻击力微增作用于弹丸伤害（数值文档第 7 章：浮点 +0.5/轮，向下取整）
             var stats = GameBootstrap.Instance != null ? GameBootstrap.Instance.PlayerStats : null;
             int attackBonus = stats != null ? Mathf.FloorToInt(stats.AttackBonusFloat) : 0;
 
-            int damage = (level >= 2 ? 2 : 1) + attackBonus;   // 白/黄=1，红=2（击碎），加每轮微增
+            int damage = (level >= 2 ? 3 : 1) + attackBonus;   // 白/黄=1，红=3（击碎/对硬核单位高额伤害），加每轮微增
             float knockback = level == 1 ? 1.5f : 0f;           // 击飞仅黄色档（数值文档 4.1）
             bool shatter = level >= 2;
 
