@@ -210,6 +210,9 @@ namespace BiuBiu.Core
         /// <summary>命中敌人震屏 trauma（微震）</summary>
         public const float TraumaHitEnemy = 0.15f;
 
+        /// <summary>弹丸撞墙（非满蓄力 / 边界墙）极轻震屏强度</summary>
+        public const float TraumaHitWall = 0.08f;
+
         /// <summary>Boss 登场震屏 trauma</summary>
         public const float TraumaBossSpawn = 0.8f;
 
@@ -289,8 +292,8 @@ namespace BiuBiu.Core
 
         // ==================== 第 12 章 地图障碍参数（数值文档 v2.4） ====================
 
-        /// <summary>障碍撒点数量（整图）</summary>
-        public const int ObstacleCount = 48;
+        /// <summary>障碍（俄罗斯方块 Tetromino 形状）数量——每个形状占 4 个 1×1 单元</summary>
+        public const int ObstacleCount = 26;
 
         /// <summary>出生点禁区半径（tile，该范围内不撒障碍）</summary>
         public const float ObstacleSpawnClearRadius = 5f;

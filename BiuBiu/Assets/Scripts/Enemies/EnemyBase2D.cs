@@ -615,6 +615,9 @@ namespace BiuBiu.Enemies
             // 仅未击杀才闪白（击杀走 Die/Shatter 的终结演出，无需闪白）
             if (hitFlash != null) hitFlash.PlayFlash(0.15f);
 
+            // 受击音效：仅敌人受伤（未死亡）时播放（死亡走 Die/Shatter，不播此音）
+            AudioManager.Play("enemy_hit");
+
             // 受击气泡（设计文档 14.x；血未尽才冒，避免与死亡气泡重复）
             SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Hit);
         }
@@ -710,6 +713,9 @@ namespace BiuBiu.Enemies
 
             // 死亡气泡（设计文档 14.x；尸体留存协程期间 transform 仍有效， 气泡可显示）
             if (data != null) SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Death);
+
+            // 死亡音效（仅普通/精英/Boss 正常死亡；击碎走 Shatter 专属音，不播此音）
+            AudioManager.Play("enemy_death");
 
             // 击杀计数与 Boss 标记（成就「蛛网突围」数据源）
             GameBootstrap.Instance?.NotifyEnemyKilled(IsBoss);

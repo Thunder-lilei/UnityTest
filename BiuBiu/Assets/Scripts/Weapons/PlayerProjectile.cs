@@ -120,18 +120,46 @@ namespace BiuBiu.Weapons
             Vector2 pos = transform.position;
             Vector2 newPos = pos + velocity * dt;
 
-            // 碰墙反弹
+            // 碰墙处理
             var hit = Physics2D.Raycast(pos, velocity.normalized, velocity.magnitude * dt + 0.05f);
             if (hit.collider != null && hit.collider is BoxCollider2D)
             {
-                if (bounceCount >= maxBounces)
+                var destructible = hit.collider.GetComponent<DestructibleObstacle>();
+
+                if (destructible != null)
                 {
-                    ObjectPool.Release(gameObject);
-                    return;
+                    // 命中内部可破坏障碍
+                    if (chargeLevel >= 2)
+                    {
+                        // 满蓄力：击碎障碍（不反弹）
+                        destructible.Break();
+                        ObjectPool.Release(gameObject);
+                        return;
+                    }
+                    else
+                    {
+                        // 非满蓄力：撞墙迸发同色像素碎片 + 轻脆音，弹丸消失
+                        SpawnWallSpark(hit.point);
+                        ObjectPool.Release(gameObject);
+                        return;
+                    }
                 }
-                velocity = Vector2.Reflect(velocity, hit.normal).normalized * velocity.magnitude;
-                bounceCount++;
-                newPos = hit.point + velocity.normalized * 0.05f;
+                else
+                {
+                    // 边界墙（不可破坏）：满蓄力反弹，非满蓄力迸火花销毁
+                    if (chargeLevel >= 2 && bounceCount < maxBounces)
+                    {
+                        velocity = Vector2.Reflect(velocity, hit.normal).normalized * velocity.magnitude;
+                        bounceCount++;
+                        newPos = hit.point + velocity.normalized * 0.05f;
+                    }
+                    else
+                    {
+                        SpawnWallSpark(hit.point);
+                        ObjectPool.Release(gameObject);
+                        return;
+                    }
+                }
             }
 
             transform.position = newPos;
@@ -176,6 +204,18 @@ namespace BiuBiu.Weapons
                     return;
                 }
             }
+        }
+
+        /// <summary>撞墙（非满蓄力 / 边界墙）迸发同色像素碎片 + 轻脆音</summary>
+        private void SpawnWallSpark(Vector2 point)
+        {
+            // 小型白/灰碎片爆发（复用击碎特效，取墙主色灰白）
+            BreakBurstManager.SpawnBreakBurst(point, velocity, Color.gray);
+            // 轻脆撞墙音（音频资产缺失时静默）
+            AudioManager.Play("wall_hit");
+            // 极轻震屏
+            if (CameraTrauma.Instance != null)
+                CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitWall);
         }
     }
 }

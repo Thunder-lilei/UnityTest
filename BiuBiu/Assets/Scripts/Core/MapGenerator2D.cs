@@ -1,234 +1,203 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace BiuBiu.Core
 {
     /// <summary>
-    /// 程序化大地图生成器（设计文档 3 章：tile 单场景 + 边界墙 + 场景内障碍墙）。
-    /// 墙壁使用运行时生成的大理石纹理贴图。
+    /// 地图生成：80×80 地面 + 四面边界墙 + 俄罗斯方块（Tetromino）形状的内部障碍。
+    /// 边界墙不可破坏；内部障碍由 1×1 单元拼成，可被满蓄力弹丸击碎。
     /// </summary>
+    [RequireComponent(typeof(EdgeCollider2D))]
     public class MapGenerator2D : MonoBehaviour
     {
-        private static Texture2D marbleTexture;
-        private static Texture2D groundTexture;
-        /// <summary>
-        /// 生成整张地图（Grid + 地面 Tilemap + 四面边界墙）。
-        /// </summary>
-        /// <param name="groundVariants">地面 tile 精灵（[0]=基础格 [1]=变体格；仅 1 张时全铺基础格）。为空或元素缺失时回退到运行时生成的地面纹理，不依赖外部美术资产。</param>
+        // ===== 俄罗斯方块形状库（标准 7 种，单元坐标，原点在形状左上角） =====
+        // 每个形状是一组 (col,row) 单元偏移；运行时随机旋转 0/90/180/270°
+        private static readonly List<Vector2Int[]> TetrominoShapes = new List<Vector2Int[]>
+        {
+            // I
+            new[] { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(3,0) },
+            // O
+            new[] { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(0,1), new Vector2Int(1,1) },
+            // T
+            new[] { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(1,1) },
+            // S
+            new[] { new Vector2Int(1,0), new Vector2Int(2,0), new Vector2Int(0,1), new Vector2Int(1,1) },
+            // Z
+            new[] { new Vector2Int(0,0), new Vector2Int(1,0), new Vector2Int(1,1), new Vector2Int(2,1) },
+            // J
+            new[] { new Vector2Int(0,0), new Vector2Int(0,1), new Vector2Int(1,1), new Vector2Int(2,1) },
+            // L
+            new[] { new Vector2Int(2,0), new Vector2Int(0,1), new Vector2Int(1,1), new Vector2Int(2,1) },
+        };
+
+        /// <summary>所有障碍单元的世界中心（供敌人生成避让 Raycast 查询、碎墙移除判定）</summary>
+        public List<Vector2> ObstacleUnits { get; private set; } = new List<Vector2>();
+
+        public const float GridSize = 1f;            // 障碍单元尺寸
+        public const float WallThickness = 2f;       // 边界墙厚度
+        public const float MapSize = 80f;            // 地图边长（tile）
+        private const float Half = MapSize / 2f;
+
+        private EdgeCollider2D _edge;
+        private readonly List<Vector2> _wallPts = new List<Vector2>();
+
         public void Generate(Sprite[] groundVariants)
         {
-            // ---- 地面：Grid + Tilemap（像素基线 PPU 32 → cell 尺寸恰为 1 tile） ----
-            var gridGo = new GameObject("Grid");
-            gridGo.transform.SetParent(transform, false);
-            gridGo.AddComponent<Grid>();
+            _edge = GetComponent<EdgeCollider2D>();
 
-            var groundGo = new GameObject("Ground");
-            groundGo.transform.SetParent(gridGo.transform, false);
-            var ground = groundGo.AddComponent<Tilemap>();
-            var groundRenderer = groundGo.AddComponent<TilemapRenderer>();
-            groundRenderer.sortingOrder = 0; // 地面在一切之下（血迹 1 / 墙 2 / 单位 10+）
-
-            // 解析有效地面 sprite（场景注入若因资源删除而缺失则回退运行时生成）
-            Sprite baseSprite = ResolveGroundSprite(groundVariants, 0);
-            Sprite variantSprite = ResolveGroundSprite(groundVariants, 1);
-
-            // 运行时创建 Tile（Tile 本质 ScriptableObject，可运行时实例化——免 .asset 落盘）
-            var baseTile = CreateTile(baseSprite);
-            var variantTile = variantSprite != null ? CreateTile(variantSprite) : null;
-
-            // 铺满 80×80：变体按撒点比例随机点缀（GameBalance.GroundVariantRatio ~15%）
-            int size = GameBalance.MapSizeTiles;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    bool useVariant = variantTile != null && Random.value < GameBalance.GroundVariantRatio;
-                    ground.SetTile(new Vector3Int(x, y, 0), useVariant ? variantTile : baseTile);
-                }
-            }
-            ground.CompressBounds(); // 收紧 Tilemap 包围盒（渲染剔除优化）
-
-            // ---- 边界墙：四面墙带（厚度 BorderWallThickness=2；坐标覆盖 0~80 世界范围） ----
-            float t = GameBalance.BorderWallThickness;
-            float s = GameBalance.MapSizeTiles;
-            BuildWall("Wall_Bottom", new Vector2(s * 0.5f, t * 0.5f), new Vector2(s, t));
-            BuildWall("Wall_Top", new Vector2(s * 0.5f, s - t * 0.5f), new Vector2(s, t));
-            BuildWall("Wall_Left", new Vector2(t * 0.5f, s * 0.5f), new Vector2(t, s));
-            BuildWall("Wall_Right", new Vector2(s - t * 0.5f, s * 0.5f), new Vector2(t, s));
-
-            // ---- 场景内障碍墙（数值文档 v2.4 第12章） ----
+            BuildGround(groundVariants);
+            BuildWall();
             GenerateObstacles();
         }
 
-        /// <summary>已生成的障碍中心列表（供 EnemySpawner2D 避让查询）</summary>
-        public List<Vector2> ObstacleCenters { get; private set; } = new List<Vector2>();
+        // ===== 地面 =====
+        private void BuildGround(Sprite[] groundVariants)
+        {
+            int n = (int)MapSize;
+            for (int x = 0; x < n; x++)
+            {
+                for (int y = 0; y < n; y++)
+                {
+                    var sr = new GameObject($"Ground_{x}_{y}").AddComponent<SpriteRenderer>();
+                    sr.sprite = groundVariants[Random.Range(0, groundVariants.Length)];
+                    sr.color = new Color(0.18f, 0.18f, 0.18f);
+                    sr.transform.position = new Vector3(x + 0.5f, y + 0.5f, 1f);
+                    sr.sortingOrder = -10;
+                    sr.transform.SetParent(transform);
+                }
+            }
+        }
 
-        /// <summary>已生成的障碍尺寸列表（与 ObstacleCenters 一一对应）</summary>
-        public List<Vector2> ObstacleSizes { get; private set; } = new List<Vector2>();
+        // ===== 四面边界墙（不可破坏，仅阻挡） =====
+        private void BuildWall()
+        {
+            float h = Half + WallThickness;  // 外缘
+            _wallPts.Add(new Vector2(-h, -h));
+            _wallPts.Add(new Vector2(h, -h));
+            _wallPts.Add(new Vector2(h, h));
+            _wallPts.Add(new Vector2(-h, h));
+            _wallPts.Add(new Vector2(-h, -h));
+            _edge.SetPoints(_wallPts);
 
-        /// <summary>
-        /// 撒障碍墙（数值文档第12章）：40 处 2×1 tile 横/竖随机石墙段。
-        /// 约束：出生点半径 5 tile 禁区 / 距边界墙 ≥3 tile / 两障碍中心间距 ≥4 tile。
-        /// </summary>
+            // 四块物理墙体（BoxCollider2D，不可破坏，无 DestructibleObstacle 组件）
+            SpawnWall(new Vector2(0, -Half - WallThickness / 2f), new Vector2(MapSize + WallThickness * 2, WallThickness));
+            SpawnWall(new Vector2(0, Half + WallThickness / 2f), new Vector2(MapSize + WallThickness * 2, WallThickness));
+            SpawnWall(new Vector2(-Half - WallThickness / 2f, 0), new Vector2(WallThickness, MapSize));
+            SpawnWall(new Vector2(Half + WallThickness / 2f, 0), new Vector2(WallThickness, MapSize));
+        }
+
+        private void SpawnWall(Vector2 center, Vector2 size)
+        {
+            var wall = new GameObject("Wall") { layer = LayerMask.NameToLayer("Obstacle") };
+            wall.transform.position = center;
+            wall.transform.SetParent(transform);
+            wall.AddComponent<BoxCollider2D>().size = size;
+            var sr = wall.AddComponent<SpriteRenderer>();
+            sr.sprite = GreyBoxFactory.Square;
+            sr.color = Color.white;
+            sr.size = size;
+            sr.sortingOrder = -5;
+        }
+
+        // ===== 俄罗斯方块障碍 =====
         private void GenerateObstacles()
         {
-            ObstacleCenters.Clear();
-            ObstacleSizes.Clear();
-
-            Vector2 spawn = GameBalance.PlayerSpawnPoint;
-            float clearR = GameBalance.ObstacleSpawnClearRadius;
-            float borderMargin = GameBalance.ObstacleBorderMargin;
-            float minSpacing = GameBalance.ObstacleMinSpacing;
-            float t = GameBalance.BorderWallThickness;
+            ObstacleUnits.Clear();
             int count = GameBalance.ObstacleCount;
-            int maxAttempts = count * 5; // 总尝试上限防死循环
+            int placed = 0, attempts = 0;
+            int maxAttempts = count * 30;
 
-            int placed = 0;
-            int attempts = 0;
             while (placed < count && attempts < maxAttempts)
             {
                 attempts++;
-                // 随机位置（边界墙内缩 borderMargin）
-                float minX = t + borderMargin;
-                float maxX = GameBalance.MapSizeTiles - t - borderMargin;
-                float minY = t + borderMargin;
-                float maxY = GameBalance.MapSizeTiles - t - borderMargin;
-                Vector2 pos = new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
+                var shape = TetrominoShapes[Random.Range(0, TetrominoShapes.Count)];
+                int rot = Random.Range(0, 4);
+                var cells = Rotate(shape, rot);
 
-                // 出生点禁区检查
-                if ((pos - spawn).sqrMagnitude < clearR * clearR) continue;
+                // 随机中心（保证整体在地图内）
+                float cx = Random.Range(-Half + 3f, Half - 3f);
+                float cy = Random.Range(-Half + 3f, Half - 3f);
 
-                // 与已有障碍间距检查
-                bool tooClose = false;
-                foreach (var c in ObstacleCenters)
+                // 计算所有单元世界坐标
+                var worldCells = new List<Vector2>();
+                bool ok = true;
+                foreach (var c in cells)
                 {
-                    if ((pos - c).sqrMagnitude < minSpacing * minSpacing) { tooClose = true; break; }
+                    Vector2 p = new Vector2(cx + c.x, cy + c.y);
+                    // 边界内检查（留 1 tile 余量）
+                    if (p.x < -Half + 1f || p.x > Half - 1f || p.y < -Half + 1f || p.y > Half - 1f)
+                    { ok = false; break; }
+                    // 出生点留空
+                    if (Vector2.Distance(p, Vector2.zero) < GameBalance.ObstacleSpawnClearRadius)
+                    { ok = false; break; }
+                    worldCells.Add(p);
                 }
-                if (tooClose) continue;
+                if (!ok) continue;
 
-                // 横/竖随机
-                bool horizontal = Random.value < 0.5f;
-                Vector2 size = horizontal ? new Vector2(2f, 1f) : new Vector2(1f, 2f);
+                // 与已有障碍单元间距检查
+                foreach (var p in worldCells)
+                {
+                    foreach (var u in ObstacleUnits)
+                    {
+                        if (Vector2.Distance(p, u) < GameBalance.ObstacleMinSpacing)
+                        { ok = false; break; }
+                    }
+                    if (!ok) break;
+                }
+                if (!ok) continue;
 
-                BuildObstacle($"Obstacle_{placed}", pos, size);
-                ObstacleCenters.Add(pos);
-                ObstacleSizes.Add(size);
+                PlaceObstacle(worldCells);
                 placed++;
             }
-            Debug.Log($"[MapGenerator2D] 障碍墙：放置 {placed}/{count} 处（尝试 {attempts} 次）");
+
+            Debug.Log($"[MapGenerator2D] 障碍（俄罗斯方块）：放置 {placed}/{count} 处（尝试 {attempts} 次）");
         }
 
-        /// <summary>建一段障碍墙：大理石纹理方块 + BoxCollider2D</summary>
-        private void BuildObstacle(string name, Vector2 center, Vector2 size)
+        private void PlaceObstacle(List<Vector2> worldCells)
         {
-            var obs = GreyBoxFactory.MakeBox(name, false, Color.white, size);
-            obs.transform.SetParent(transform, false);
-            obs.transform.position = center;
-            var obsSr = obs.GetComponent<SpriteRenderer>();
-            obsSr.sprite = CreateMarbleSprite();
-            obsSr.color = Color.white;
-            obsSr.sortingOrder = 2;
-            var col = obs.AddComponent<BoxCollider2D>();
-            col.size = Vector2.one;
-        }
+            var root = new GameObject("Obstacle_Tetro").transform;
+            root.SetParent(transform);
 
-        /// <summary>运行时生成大理石纹理 Sprite（32×32，白灰纹路+暗色脉络）</summary>
-        private static Sprite CreateMarbleSprite()
-        {
-            if (marbleTexture == null)
+            foreach (var p in worldCells)
             {
-                int size = 32;
-                marbleTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-                marbleTexture.filterMode = FilterMode.Point;
-                var px = new Color32[size * size];
-                var rnd = new System.Random(42);
-                for (int y = 0; y < size; y++)
-                {
-                    for (int x = 0; x < size; x++)
-                    {
-                        // 基底：浅灰白
-                        byte baseVal = (byte)(200 + rnd.Next(0, 30));
-                        // 脉络：几条暗色曲线
-                        float nx = (float)x / size;
-                        float ny = (float)y / size;
-                        float vein = Mathf.Abs(Mathf.Sin(nx * 12f + ny * 3f) * Mathf.Cos(ny * 8f));
-                        if (vein < 0.15f)
-                        {
-                            baseVal = (byte)(baseVal * 0.5f); // 暗脉络
-                        }
-                        // 噪点
-                        baseVal = (byte)Mathf.Clamp(baseVal + rnd.Next(-8, 8), 0, 255);
-                        px[y * size + x] = new Color32(baseVal, (byte)(baseVal * 0.97f), (byte)(baseVal * 0.93f), 255);
-                    }
-                }
-                marbleTexture.SetPixels32(px);
-                marbleTexture.Apply();
+                ObstacleUnits.Add(p);
+
+                var cell = new GameObject("ObstacleCell") { layer = LayerMask.NameToLayer("Obstacle") };
+                cell.transform.position = p;
+                cell.transform.SetParent(root);
+
+                var col = cell.AddComponent<BoxCollider2D>();
+                col.size = Vector2.one * GridSize;
+
+                var destructible = cell.AddComponent<DestructibleObstacle>();
+                destructible.Root = root;
+
+                // 视觉：白块
+                var sr = cell.AddComponent<SpriteRenderer>();
+                sr.sprite = GreyBoxFactory.Square;
+                sr.color = Color.white;
+                sr.sortingOrder = -5;
+                sr.size = Vector2.one * GridSize;
             }
-            return Sprite.Create(marbleTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
         }
 
-        /// <summary>运行时创建 Tile（sprite 注入；Tile 即 ScriptableObject 实例）</summary>
-        private static Tile CreateTile(Sprite sprite)
+        /// <summary>将形状旋转 rot×90°（围绕原点）</summary>
+        private static List<Vector2Int> Rotate(Vector2Int[] shape, int rot)
         {
-            var tile = ScriptableObject.CreateInstance<Tile>();
-            tile.sprite = sprite;
-            return tile;
-        }
-
-        /// <summary>
-        /// 取地面 sprite：优先用场景注入的有效 sprite；缺失（如美术资源已删除）时回退运行时生成的绿灰地表纹理。
-        /// </summary>
-        private static Sprite ResolveGroundSprite(Sprite[] variants, int index)
-        {
-            if (variants != null && index < variants.Length && variants[index] != null)
-                return variants[index];
-            return CreateGroundSprite();
-        }
-
-        /// <summary>运行时生成地面纹理 Sprite（32×32，绿灰地表+暗脉络，与大理石墙区分）</summary>
-        private static Sprite CreateGroundSprite()
-        {
-            if (groundTexture == null)
+            var res = new List<Vector2Int>();
+            foreach (var c in shape)
             {
-                int size = 32;
-                groundTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-                groundTexture.filterMode = FilterMode.Point;
-                var px = new Color32[size * size];
-                var rnd = new System.Random(7);
-                for (int y = 0; y < size; y++)
+                int x = c.x, y = c.y;
+                for (int i = 0; i < (rot & 3); i++)
                 {
-                    for (int x = 0; x < size; x++)
-                    {
-                        // 基底：暗绿灰
-                        byte g = (byte)(90 + rnd.Next(0, 26));
-                        byte r = (byte)(g * 0.78f);
-                        byte b = (byte)(g * 0.7f);
-                        // 脉络：少量暗色斑点
-                        float nx = (float)x / size;
-                        float ny = (float)y / size;
-                        float vein = Mathf.Abs(Mathf.Sin(nx * 9f + ny * 5f));
-                        if (vein < 0.12f) { r = (byte)(r * 0.6f); g = (byte)(g * 0.6f); b = (byte)(b * 0.6f); }
-                        px[y * size + x] = new Color32(r, g, b, 255);
-                    }
+                    // 90° 顺时针：(x,y) -> (y, -x)
+                    int nx = y;
+                    int ny = -x;
+                    x = nx; y = ny;
                 }
-                groundTexture.SetPixels32(px);
-                groundTexture.Apply();
+                res.Add(new Vector2Int(x, y));
             }
-            return Sprite.Create(groundTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
-        }
-
-        /// <summary>建一段墙：大理石纹理方块 + BoxCollider2D</summary>
-        private void BuildWall(string name, Vector2 center, Vector2 size)
-        {
-            var wall = GreyBoxFactory.MakeBox(name, false, Color.white, size);
-            wall.transform.SetParent(transform, false);
-            wall.transform.position = center;
-            var wallSr = wall.GetComponent<SpriteRenderer>();
-            wallSr.sprite = CreateMarbleSprite();
-            wallSr.color = Color.white;
-            wallSr.sortingOrder = 2; // 压地面(0)，被单位(10+)盖住
-            wall.AddComponent<BoxCollider2D>();
+            return res;
         }
     }
 }
