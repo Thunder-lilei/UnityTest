@@ -35,7 +35,7 @@ BiuBiu/
 │   │   ├── Weapons/              # SlingWeapon / PlayerProjectile
 │   │   └── Drops/                # DropManager（血迹池）
 │   ├── Settings/                 # PlayerControls.inputactions
-│   └── Audio/                    # 音频资产（已接入蓄力音 sling_charge.wav；其余事件音待补充）
+│   └── Audio/                    # 音频资产（已接入蓄力音 laser_charge.wav；其余事件音待补充）
 ├── Docs/                         # 设计文档.md / 开发文档.md / 数值文档.md（中文决策唯一出处）
 ```
 
