@@ -44,6 +44,29 @@ namespace BiuBiu.Enemies
         /// <summary>接触伤害结算计时（0.5s 一跳）</summary>
         private float contactTimer;
 
+        /// <summary>八方向扇形横扫预警（LineRenderer，前摇时显示，出手即清除）</summary>
+        private LineRenderer sweepWarning;
+
+        /// <summary>直线冲撞预警（LineRenderer，前摇时显示朝玩家的轨迹，冲刺即清除）</summary>
+        private LineRenderer chargeWarning;
+
+        /// <summary>创建一条预警 LineRenderer（世界空间、loop 关闭、置于角色上层）</summary>
+        private static LineRenderer CreateWarning(string name)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(null, false); // 世界空间，不随 Boss 移动（每帧重绘）
+            var lr = go.AddComponent<LineRenderer>();
+            lr.startWidth = 0.06f;
+            lr.endWidth = 0.06f;
+            lr.sortingOrder = 18;
+            lr.useWorldSpace = true;
+            lr.loop = false;
+            var shader = Shader.Find("Sprites/Default");
+            if (shader != null) lr.sharedMaterial = new Material(shader);
+            lr.enabled = false;
+            return lr;
+        }
+
         /// <summary>
         /// Boss 专属初始化（血量 = baseHealth × bossIndex，数值文档 5.3「24 ×n」）。
         /// </summary>
@@ -59,6 +82,10 @@ namespace BiuBiu.Enemies
             chargeHitPlayer = false;
             contactTimer = 0f;
 
+            // 预警渲染器（Boss 攻击范围可视化，让玩家预判闪避）
+            sweepWarning = CreateWarning("BossSweepWarning");
+            chargeWarning = CreateWarning("BossChargeWarning");
+
             // 登场演出：强震屏（数值文档 9 章 TraumaBossSpawn 0.8）
             if (CameraTrauma.Instance != null)
                 CameraTrauma.Instance.AddTrauma(GameBalance.TraumaBossSpawn);
@@ -69,6 +96,7 @@ namespace BiuBiu.Enemies
         {
             Vector2 toPlayer = (Vector2)player.transform.position - (Vector2)transform.position;
             float dist = toPlayer.magnitude;
+            float progress = 0f; // 前摇进度（SweepWindup/ChargeWindup 复用）
 
             // 接触伤害由基类 ContactDamageTick 处理（Data.contactTickInterval=0.5）
 
@@ -77,13 +105,15 @@ namespace BiuBiu.Enemies
             switch (bossState)
             {
                 case BossState.SweepWindup:
-                    // 前摇渐红蓄力
-                    float progress = 1f - Mathf.Clamp01(bossTimer / Data.sweepWindup);
+                    // 前摇渐红蓄力 + 八方向扇形预警
+                    progress = 1f - Mathf.Clamp01(bossTimer / Data.sweepWindup);
                     var sr = GetComponent<SpriteRenderer>();
                     if (sr != null) sr.color = Color.Lerp(MainColor, Color.red, progress);
+                    UpdateSweepWarning(progress);
                     if (bossTimer <= 0f)
                     {
                         if (sr != null) sr.color = MainColor;
+                        HideWarnings();
                         FireEightSweep(player);
                         bossState = BossState.WaitAfterSweep;
                         bossTimer = Data.sweepInterval;
@@ -101,16 +131,18 @@ namespace BiuBiu.Enemies
                     break;
 
                 case BossState.ChargeWindup:
-                    // 前摇渐红蓄力 + 锁定方向
+                    // 前摇渐红蓄力 + 锁定方向 + 冲撞直线预警
                     progress = 1f - Mathf.Clamp01(bossTimer / Data.bossChargeWindup);
                     var sr2 = GetComponent<SpriteRenderer>();
                     if (sr2 != null) sr2.color = Color.Lerp(MainColor, Color.red, progress);
+                    UpdateChargeWarning(progress, toPlayer.normalized);
                     if (bossTimer <= 0f)
                     {
                         chargeDir = toPlayer.normalized;
                         chargeRemaining = Data.bossChargeDistance;
                         chargeHitPlayer = false;
                         if (sr2 != null) sr2.color = MainColor;
+                        HideWarnings();
                         bossState = BossState.Charging;
                     }
                     break;
@@ -173,6 +205,69 @@ namespace BiuBiu.Enemies
                 }
             }
             if (hit) player.TakeDamage(Data.damage);
+        }
+
+        /// <summary>
+        /// 八方向扇形横扫预警：朝 8 个米字方向各画一个扇形轮廓（半径 = BossSweepRadius、角度 = BossSweepAngle），
+        /// alpha 随前摇进度加深，让玩家看清横扫覆盖范围并预判走位。
+        /// </summary>
+        private void UpdateSweepWarning(float progress)
+        {
+            if (sweepWarning == null) return;
+            Vector2 origin = transform.position;
+            float r = GameBalance.BossSweepRadius;
+            float half = GameBalance.BossSweepAngle * 0.5f;
+            float alpha = 0.25f + 0.45f * progress; // 0.25→0.7
+            var col = new Color(1f, 0.85f, 0.2f, alpha); // 金色预警（与 Boss 主色呼应）
+
+            // 每个扇形轮廓：中心 → 弧起点 → 弧上采样点 → 弧终点 → 中心（闭合感）
+            var pts = new System.Collections.Generic.List<Vector3>();
+            int dirs = GameBalance.BossSweepDirections;
+            int arcSeg = 6;
+            for (int d = 0; d < dirs; d++)
+            {
+                float centerAng = d * 45f * Mathf.Deg2Rad;
+                float a0 = centerAng - half * Mathf.Deg2Rad;
+                float a1 = centerAng + half * Mathf.Deg2Rad;
+                pts.Add(origin); // 从中心起笔
+                for (int s = 0; s <= arcSeg; s++)
+                {
+                    float a = Mathf.Lerp(a0, a1, (float)s / arcSeg);
+                    pts.Add(origin + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r);
+                }
+                pts.Add(origin); // 回到中心（形成扇形闭合轮廓）
+            }
+            sweepWarning.enabled = true;
+            sweepWarning.positionCount = pts.Count;
+            sweepWarning.SetPositions(pts.ToArray());
+            sweepWarning.startColor = col;
+            sweepWarning.endColor = col;
+        }
+
+        /// <summary>
+        /// 直线冲撞预警：从 Boss 朝玩家方向画一条长度 = bossChargeDistance 的直线，
+        /// alpha 随前摇进度加深，让玩家看清冲撞轨迹并提前闪避。
+        /// </summary>
+        private void UpdateChargeWarning(float progress, Vector2 dir)
+        {
+            if (chargeWarning == null) return;
+            Vector2 origin = transform.position;
+            Vector2 end = origin + dir * Data.bossChargeDistance;
+            float alpha = 0.3f + 0.5f * progress; // 0.3→0.8
+            var col = new Color(1f, 0.3f, 0.1f, alpha); // 红橙预警（冲撞=危险）
+            chargeWarning.enabled = true;
+            chargeWarning.positionCount = 2;
+            chargeWarning.SetPosition(0, origin);
+            chargeWarning.SetPosition(1, end);
+            chargeWarning.startColor = col;
+            chargeWarning.endColor = col;
+        }
+
+        /// <summary>清除所有预警渲染器</summary>
+        private void HideWarnings()
+        {
+            if (sweepWarning != null) sweepWarning.enabled = false;
+            if (chargeWarning != null) chargeWarning.enabled = false;
         }
     }
 }

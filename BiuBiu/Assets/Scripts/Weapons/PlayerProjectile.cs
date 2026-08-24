@@ -223,8 +223,8 @@ namespace BiuBiu.Weapons
         {
             // 小型白/灰碎片爆发（复用击碎特效，取墙主色灰白）
             BreakBurstManager.SpawnBreakBurst(point, velocity, Color.gray);
-            // 轻脆撞墙音（音频资产缺失时静默）
-            AudioManager.Play("wall_hit");
+            // 轻脆撞墙音（素材偏响，整体音量降至一半）
+            AudioManager.Play("wall_hit", 0.5f);
             // 极轻震屏
             if (CameraTrauma.Instance != null)
                 CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitWall);

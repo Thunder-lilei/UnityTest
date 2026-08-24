@@ -54,15 +54,16 @@ namespace BiuBiu.Core
             }
         }
 
-        /// <summary>播放一次音效（按 Resources/Audio/&lt;name&gt; 加载，结果缓存）</summary>
-        public static void Play(string clipName)
+        /// <summary>播放一次音效（按 Resources/Audio/&lt;name&gt; 加载，结果缓存）。
+        /// volumeScale 为可选音量系数（默认 1），乘到音轨音量上，用于单独压低某些偏响的音效。</summary>
+        public static void Play(string clipName, float volumeScale = 1f)
         {
             var mgr = Instance;
             if (mgr == null || mgr._source == null) return;
 
             AudioClip clip = mgr.LoadClip(clipName);
             if (clip == null) return;
-            mgr._source.PlayOneShot(clip);
+            mgr._source.PlayOneShot(clip, volumeScale);
         }
 
         private AudioClip LoadClip(string clipName)
