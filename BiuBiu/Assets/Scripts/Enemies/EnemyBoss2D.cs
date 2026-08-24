@@ -44,14 +44,20 @@ namespace BiuBiu.Enemies
         /// <summary>接触伤害结算计时（0.5s 一跳）</summary>
         private float contactTimer;
 
-        /// <summary>八方向扇形横扫预警（LineRenderer，前摇时显示，出手即清除）</summary>
-        private LineRenderer sweepWarning;
+        /// <summary>八方向扇形横扫预警：8 个扇区填充（红，半透明）</summary>
+        private SpriteRenderer[] sweepFill;
 
-        /// <summary>直线冲撞预警（LineRenderer，前摇时显示朝玩家的轨迹，冲刺即清除）</summary>
-        private LineRenderer chargeWarning;
+        /// <summary>八方向扇形横扫预警：扇区边框（红色 LineRenderer，loop）</summary>
+        private LineRenderer sweepOutline;
 
-        /// <summary>创建一条预警 LineRenderer（世界空间、loop 关闭、置于角色上层）</summary>
-        private static LineRenderer CreateWarning(string name)
+        /// <summary>直线冲撞预警：矩形填充（红，半透明）</summary>
+        private SpriteRenderer chargeFill;
+
+        /// <summary>直线冲撞预警：矩形边框（红色 LineRenderer，loop）</summary>
+        private LineRenderer chargeOutline;
+
+        /// <summary>创建一条预警 LineRenderer（世界空间、loop 可配置、置于角色上层）</summary>
+        private static LineRenderer CreateWarningLine(string name, bool loop)
         {
             var go = new GameObject(name);
             go.transform.SetParent(null, false); // 世界空间，不随 Boss 移动（每帧重绘）
@@ -60,11 +66,23 @@ namespace BiuBiu.Enemies
             lr.endWidth = 0.06f;
             lr.sortingOrder = 18;
             lr.useWorldSpace = true;
-            lr.loop = false;
+            lr.loop = loop;
             var shader = Shader.Find("Sprites/Default");
             if (shader != null) lr.sharedMaterial = new Material(shader);
             lr.enabled = false;
             return lr;
+        }
+
+        /// <summary>创建一个预警填充 SpriteRenderer（世界空间、置于角色下层、半透明由 color 控制）</summary>
+        private static SpriteRenderer CreateFillSprite(string name)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(null, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = GreyBoxFactory.Square; // 白色方块，靠 scale/rotation 塑形，靠 color 染色
+            sr.sortingOrder = 17;
+            sr.enabled = false;
+            return sr;
         }
 
         /// <summary>
@@ -83,8 +101,24 @@ namespace BiuBiu.Enemies
             contactTimer = 0f;
 
             // 预警渲染器（Boss 攻击范围可视化，让玩家预判闪避）
-            sweepWarning = CreateWarning("BossSweepWarning");
-            chargeWarning = CreateWarning("BossChargeWarning");
+            sweepOutline = CreateWarningLine("BossSweepOutline", true);
+            chargeOutline = CreateWarningLine("BossChargeOutline", true);
+            chargeFill = CreateFillSprite("BossChargeFill");
+
+            // 八方向扇形填充：每个方向一个 SpriteRenderer（复用基类扇形纹理，pivot=左中，从 Boss 中心延展）
+            var sectorTex = EnemyBase2D.BuildProgressiveArcTexture(GameBalance.BossSweepAngle, 1f);
+            var sectorSprite = Sprite.Create(sectorTex, new Rect(0, 0, sectorTex.width, sectorTex.height), new Vector2(0, 0.5f), sectorTex.width);
+            int dirs = GameBalance.BossSweepDirections;
+            sweepFill = new SpriteRenderer[dirs];
+            for (int d = 0; d < dirs; d++)
+            {
+                var sr = CreateFillSprite("BossSweepFill" + d);
+                sr.sprite = sectorSprite;
+                sr.transform.rotation = Quaternion.Euler(0, 0, d * 45f); // 米字八方向
+                sr.transform.position = transform.position;
+                sr.transform.localScale = new Vector3(GameBalance.BossSweepRadius, GameBalance.BossSweepRadius, 1f);
+                sweepFill[d] = sr;
+            }
 
             // 登场演出：强震屏（数值文档 9 章 TraumaBossSpawn 0.8）
             if (CameraTrauma.Instance != null)
@@ -207,20 +241,36 @@ namespace BiuBiu.Enemies
             if (hit) player.TakeDamage(Data.damage);
         }
 
+        /// <summary>Boss 失活（死亡/回池）时清除所有预警渲染器，避免残留屏幕</summary>
+        private void OnDisable()
+        {
+            HideWarnings();
+        }
+
         /// <summary>
-        /// 八方向扇形横扫预警：朝 8 个米字方向各画一个扇形轮廓（半径 = BossSweepRadius、角度 = BossSweepAngle），
+        /// 八方向扇形横扫预警：8 个红色半透明扇形填充 + 红色边框轮廓（半径 = BossSweepRadius、角度 = BossSweepAngle），
         /// alpha 随前摇进度加深，让玩家看清横扫覆盖范围并预判走位。
         /// </summary>
         private void UpdateSweepWarning(float progress)
         {
-            if (sweepWarning == null) return;
+            if (sweepFill == null) return;
             Vector2 origin = transform.position;
             float r = GameBalance.BossSweepRadius;
             float half = GameBalance.BossSweepAngle * 0.5f;
-            float alpha = 0.25f + 0.45f * progress; // 0.25→0.7
-            var col = new Color(1f, 0.85f, 0.2f, alpha); // 金色预警（与 Boss 主色呼应）
+            float fillAlpha = 0.18f + 0.27f * progress; // 0.18→0.45 填充
+            float lineAlpha = 0.4f + 0.5f * progress;    // 0.4→0.9 边框
+            var fillCol = new Color(1f, 0.1f, 0.1f, fillAlpha);
+            var lineCol = new Color(1f, 0.15f, 0.15f, lineAlpha);
 
-            // 每个扇形轮廓：中心 → 弧起点 → 弧上采样点 → 弧终点 → 中心（闭合感）
+            // 扇区填充：旋转/缩放已在 InitializeBoss 设好，这里只更新位置与颜色
+            for (int d = 0; d < sweepFill.Length; d++)
+            {
+                sweepFill[d].transform.position = origin;
+                sweepFill[d].color = fillCol;
+                sweepFill[d].enabled = true;
+            }
+
+            // 扇区边框：8 个扇形闭合轮廓（中心 → 弧 → 中心）
             var pts = new System.Collections.Generic.List<Vector3>();
             int dirs = GameBalance.BossSweepDirections;
             int arcSeg = 6;
@@ -229,45 +279,67 @@ namespace BiuBiu.Enemies
                 float centerAng = d * 45f * Mathf.Deg2Rad;
                 float a0 = centerAng - half * Mathf.Deg2Rad;
                 float a1 = centerAng + half * Mathf.Deg2Rad;
-                pts.Add(origin); // 从中心起笔
+                pts.Add(origin);
                 for (int s = 0; s <= arcSeg; s++)
                 {
                     float a = Mathf.Lerp(a0, a1, (float)s / arcSeg);
                     pts.Add(origin + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r);
                 }
-                pts.Add(origin); // 回到中心（形成扇形闭合轮廓）
+                pts.Add(origin);
             }
-            sweepWarning.enabled = true;
-            sweepWarning.positionCount = pts.Count;
-            sweepWarning.SetPositions(pts.ToArray());
-            sweepWarning.startColor = col;
-            sweepWarning.endColor = col;
+            sweepOutline.enabled = true;
+            sweepOutline.positionCount = pts.Count;
+            sweepOutline.SetPositions(pts.ToArray());
+            sweepOutline.startColor = lineCol;
+            sweepOutline.endColor = lineCol;
         }
 
         /// <summary>
-        /// 直线冲撞预警：从 Boss 朝玩家方向画一条长度 = bossChargeDistance 的直线，
-        /// alpha 随前摇进度加深，让玩家看清冲撞轨迹并提前闪避。
+        /// 直线冲撞预警：沿玩家方向画一个红色半透明矩形（长 = bossChargeDistance、宽 = Boss 体型），
+        /// 外加红色矩形边框，让玩家看清冲撞轨迹并提前闪避。
         /// </summary>
         private void UpdateChargeWarning(float progress, Vector2 dir)
         {
-            if (chargeWarning == null) return;
+            if (chargeFill == null) return;
             Vector2 origin = transform.position;
-            Vector2 end = origin + dir * Data.bossChargeDistance;
-            float alpha = 0.3f + 0.5f * progress; // 0.3→0.8
-            var col = new Color(1f, 0.3f, 0.1f, alpha); // 红橙预警（冲撞=危险）
-            chargeWarning.enabled = true;
-            chargeWarning.positionCount = 2;
-            chargeWarning.SetPosition(0, origin);
-            chargeWarning.SetPosition(1, end);
-            chargeWarning.startColor = col;
-            chargeWarning.endColor = col;
+            float len = Data.bossChargeDistance;
+            float width = Data.bodySize.x; // Boss 体型宽
+            float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            float fillAlpha = 0.2f + 0.3f * progress; // 0.2→0.5
+            float lineAlpha = 0.45f + 0.5f * progress; // 0.45→0.95
+
+            // 矩形填充：以 Boss 为中心向 dir 延伸的方块（GreyBoxFactory.Square pivot=中心）
+            chargeFill.transform.position = origin + dir * (len * 0.5f);
+            chargeFill.transform.rotation = Quaternion.Euler(0, 0, ang);
+            chargeFill.transform.localScale = new Vector3(len, width, 1f);
+            chargeFill.color = new Color(1f, 0.1f, 0.1f, fillAlpha);
+            chargeFill.enabled = true;
+
+            // 矩形边框：四角世界坐标（loop）
+            Vector2 perp = new Vector2(-dir.y, dir.x) * (width * 0.5f);
+            Vector2 c0 = origin + perp;                 // 近左
+            Vector2 c1 = origin - perp;                 // 近右
+            Vector2 c2 = origin + dir * len - perp;     // 远右
+            Vector2 c3 = origin + dir * len + perp;     // 远左
+            chargeOutline.enabled = true;
+            chargeOutline.positionCount = 5;
+            chargeOutline.SetPosition(0, c0);
+            chargeOutline.SetPosition(1, c1);
+            chargeOutline.SetPosition(2, c2);
+            chargeOutline.SetPosition(3, c3);
+            chargeOutline.SetPosition(4, c0);
+            var lineCol = new Color(1f, 0.15f, 0.15f, lineAlpha);
+            chargeOutline.startColor = lineCol;
+            chargeOutline.endColor = lineCol;
         }
 
         /// <summary>清除所有预警渲染器</summary>
         private void HideWarnings()
         {
-            if (sweepWarning != null) sweepWarning.enabled = false;
-            if (chargeWarning != null) chargeWarning.enabled = false;
+            if (sweepFill != null) foreach (var s in sweepFill) if (s != null) s.enabled = false;
+            if (sweepOutline != null) sweepOutline.enabled = false;
+            if (chargeFill != null) chargeFill.enabled = false;
+            if (chargeOutline != null) chargeOutline.enabled = false;
         }
     }
 }

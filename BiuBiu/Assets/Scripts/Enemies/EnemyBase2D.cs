@@ -579,8 +579,8 @@ namespace BiuBiu.Enemies
             windupArcFill.color = new Color(1f, 0.15f, 0.1f, 0.6f);
         }
 
-        /// <summary>生成按进度填充的扇形贴图（进度从一侧逐渐填满到完整扇形）</summary>
-        private static Texture2D BuildProgressiveArcTexture(float sweepAngle, float progress)
+        /// <summary>生成按进度填充的扇形贴图（进度从一侧逐渐填满到完整扇形）；Boss 八方向预警复用</summary>
+        protected static Texture2D BuildProgressiveArcTexture(float sweepAngle, float progress)
         {
             int size = 64;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
