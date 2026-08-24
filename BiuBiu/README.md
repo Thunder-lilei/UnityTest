@@ -2,7 +2,7 @@
 
 > 本子项目位于 `UnityTest` 仓库的 **`BiuBiu/`** 子目录。Unity 项目根即 `BiuBiu/`（不是 `UnityTest/`），用 Unity 打开 `BiuBiu/` 目录即可。
 
-2D 像素风俯视角**幸存者类街机动作游戏**：大地图波次刷怪、弹弓三段蓄力、每轮自动变强。当前为可玩原型，所有美术为**纯色几何灰盒**（无外部素材依赖），后续接入音频。
+2D 像素风俯视角**幸存者类街机动作游戏**：大地图波次刷怪、弹弓三段蓄力、每轮自动变强。当前为可玩原型，所有美术为**纯色几何灰盒**（无外部素材依赖），音频已由 `AudioManager` 程序化接入（蓄力/闪避/三档发射音）。
 
 ## 技术栈
 
@@ -24,15 +24,16 @@
 ```
 BiuBiu/
 ├── Assets/
-│   ├── Resources/Data/Enemies/   # EnemyData ScriptableObject 实例（5 个敌人配置）
+│   ├── Resources/Data/Enemies/   # EnemyData ScriptableObject 实例（4 个敌人配置：远程/近战横扫/精英/Boss）
 │   ├── Scenes/                   # Boot.unity（引导）+ Main.unity（战斗）
 │   ├── Scripts/
-│   │   ├── Core/                 # GameBootstrap / GameBalance / MapGenerator2D / RuntimeSceneBuilder / ObjectPool / 等
+│   │   ├── Core/                 # GameBootstrap / GameBalance / GameState / MapGenerator2D / RuntimeSceneBuilder / ObjectPool / AudioManager / CameraFollow+Trauma / GreyBoxFactory / HitFlash / DeveloperMode / SaveSystem / RunStats / IDamageable+IKnockbackable
 │   │   ├── Data/                 # EnemyData 等 ScriptableObject 定义
 │   │   ├── Enemies/              # EnemyBase2D / EnemyBoss2D / EnemySpawner2D / Projectile2D
 │   │   ├── Player/               # PlayerController / PlayerStats
 │   │   ├── UI/                   # GameHud / PauseMenu / SettingsPanel / DeathPanel
 │   │   ├── Weapons/              # SlingWeapon / PlayerProjectile
+│   │   ├── VFX/                  # BreakBurstManager / BreakShard（击碎同色碎片特效）
 │   │   └── Drops/                # DropManager（血迹池）
 │   ├── Settings/                 # PlayerControls.inputactions
 │   └── Audio/                    # 音频资产（蓄力音 laser_charge.wav + 闪避 dodge.wav + 三档发射 laser_fire_white/yellow/red.wav；其余事件音待补充）
@@ -70,7 +71,7 @@ BiuBiu/
 - ✅ M0 技术验证（灰盒/池化/闪白/Spine 路线评估）
 - ✅ M1/M2 核心循环（波次/敌人/UI/死亡战报/开发者模式）
 - ✅ M3 系统扩展（Boss / 精英 / 近战远程差异化灰盒表现；玩家刚体物理碰撞挡墙；近战前摇预警窗口）
-- 🚧 M4 元游戏与打磨（音频部分接入：蓄力/闪避/三档发射已接，其余事件音待补充；成就/统计/开始页待做）
+- 🚧 M4 元游戏与打磨（音频已接入蓄力/闪避/三档发射；开始页/成就系统等元游戏待做）
 
 ## 许可证
 
