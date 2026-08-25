@@ -443,7 +443,7 @@ namespace BiuBiu.Core
         public const float TitleCardRevealHold = 0.15f;
 
         /// <summary>开场卡：超时提醒延迟（秒，开局后多久未按任意键才在右下角淡入提醒）</summary>
-        public const float TitleCardHintDelay = 5f;
+        public const float TitleCardHintDelay = 3f;
 
         /// <summary>开场卡：提醒呼吸闪烁周期（秒，透明度在 0.4~0.9 间往复）</summary>
         public const float TitleCardHintPulsePeriod = 1.6f;

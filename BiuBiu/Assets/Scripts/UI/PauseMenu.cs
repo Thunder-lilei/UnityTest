@@ -166,12 +166,11 @@ namespace BiuBiu.UI
             SceneManager.LoadScene("Main");
         }
 
-        /// <summary>回到标题：Boot 重播开场卡（标题界面）</summary>
+        /// <summary>回到标题：显示简洁标题界面（不播电影开场卡；停在当前有相机场景）</summary>
         private static void BackToTitle()
         {
             Resume();
-            TitleCard.ResetForReturnToTitle();
-            SceneManager.LoadScene(0);
+            TitleScreen.Show();
         }
     }
 }

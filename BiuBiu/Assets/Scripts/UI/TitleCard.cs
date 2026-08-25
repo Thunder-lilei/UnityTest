@@ -20,12 +20,6 @@ namespace BiuBiu.UI
         /// <summary>进程内是否已播放过开场卡（每次启动游戏仅播放一次；跨进程/重开游戏自动重置）</summary>
         public static bool HasPlayedThisSession { get; private set; }
 
-        /// <summary>返回标题时重置：让 Boot 重新播放开场卡（标题界面），而非跳过直接进 Main</summary>
-        public static void ResetForReturnToTitle()
-        {
-            HasPlayedThisSession = false;
-        }
-
         private Phase phase = Phase.FadeIn;
         private float timer;          // 当前阶段已过去时间（秒）
         private float revealTimer;    // Done 阶段：黑底保持时长（盖住切场景瞬间，丝滑切换）
