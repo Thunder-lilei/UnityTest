@@ -19,25 +19,73 @@ namespace BiuBiu.Core
     }
 
     /// <summary>
-    /// 跨局持久化（PlayerPrefs 轻量实现，无中途存档——设计文档 2.4：死亡即结算，重开零成本）。
+    /// 跨局持久化（JSON 文件实现，无中途存档——设计文档 2.4：死亡即结算，重开零成本）。
     /// 仅记录两项历史最佳（供战报「新纪录！」与 ESC 统计记录查看）：
     /// 1. 历史最高轮次（BestWave）；
     /// 2. 历史单局最多击杀（BestKills）。
     /// 成就系统已取消；累计统计（总开局/累计击杀/存活/Boss/首次死亡）不再持久化。
-    /// v3.3：等级口径已改轮次（旧 BestLevel 键弃用，旧纪录不延续）。
+    /// 存储位置：Application.persistentDataPath + "/save.json"（Windows 即 AppData/LocalLow/DefaultCompany/BiuBiu/save.json）。
     /// </summary>
     public static class SaveSystem
     {
-        // PlayerPrefs 键前缀（避免与其他项目/系统冲突）
-        private const string KeyPrefix = "BiuBiu.";
+        // JSON 存档路径（进程内缓存，避免频繁读文件）
+        private static string SavePath => Application.persistentDataPath + "/save.json";
+
+        [System.Serializable]
+        private class SaveData
+        {
+            public int BestWave;
+            public int BestKills;
+        }
+
+        private static SaveData _cache;
+        private static SaveData Cache
+        {
+            get
+            {
+                if (_cache == null) _cache = Load();
+                return _cache;
+            }
+        }
+
+        private static SaveData Load()
+        {
+            try
+            {
+                if (System.IO.File.Exists(SavePath))
+                {
+                    string json = System.IO.File.ReadAllText(SavePath);
+                    var data = JsonUtility.FromJson<SaveData>(json);
+                    if (data != null) return data;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[SaveSystem] 读取存档失败，重置为默认值：{e.Message}");
+            }
+            return new SaveData(); // 缺失/损坏 → 全 0
+        }
+
+        private static void Persist()
+        {
+            try
+            {
+                string json = JsonUtility.ToJson(_cache, true);
+                System.IO.File.WriteAllText(SavePath, json);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[SaveSystem] 写入存档失败：{e.Message}");
+            }
+        }
 
         // ==================== 历史最佳（单局，仅两项） ====================
 
         /// <summary>历史最高轮次（ESC 统计记录 / 战报展示）</summary>
-        public static int BestWave => PlayerPrefs.GetInt(KeyPrefix + "BestWave", 0);
+        public static int BestWave => Cache.BestWave;
 
         /// <summary>历史单局最多击杀（ESC 统计记录 / 战报展示）</summary>
-        public static int BestKills => PlayerPrefs.GetInt(KeyPrefix + "BestKills", 0);
+        public static int BestKills => Cache.BestKills;
 
         // ==================== 结算 ====================
 
@@ -56,24 +104,24 @@ namespace BiuBiu.Core
             };
 
             // 历史最佳对比（严格大于才算破纪录）
-            report.WaveNewRecord = run.Wave > BestWave;
-            report.KillsNewRecord = run.Kills > BestKills;
+            report.WaveNewRecord = run.Wave > Cache.BestWave;
+            report.KillsNewRecord = run.Kills > Cache.BestKills;
 
-            // 写入新纪录
+            // 写入新纪录（内存 + 落盘）
             if (report.WaveNewRecord)
-                PlayerPrefs.SetInt(KeyPrefix + "BestWave", run.Wave);
+                Cache.BestWave = run.Wave;
             if (report.KillsNewRecord)
-                PlayerPrefs.SetInt(KeyPrefix + "BestKills", run.Kills);
+                Cache.BestKills = run.Kills;
+            Persist();
 
-            PlayerPrefs.Save();
             return report;
         }
 
         /// <summary>清空全部存档（设置界面「清空战绩」备用）</summary>
         public static void WipeAll()
         {
-            PlayerPrefs.DeleteAll(); // 本项目无其他 PlayerPrefs 键，全删等价于清本项目存档
-            PlayerPrefs.Save();
+            _cache = new SaveData(); // 全 0
+            Persist();
         }
     }
 }
