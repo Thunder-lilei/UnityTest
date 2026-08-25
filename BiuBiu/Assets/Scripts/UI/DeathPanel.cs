@@ -115,7 +115,7 @@ namespace BiuBiu.UI
                 {
                     Restart();
                 }
-                if (GUI.Button(new Rect(panel.x + panel.width - 260f, panel.y + 300f, 180f, 52f), "回到标题", btnStyle))
+                if (GUI.Button(new Rect(panel.x + panel.width - 260f, panel.y + 300f, 180f, 52f), "再来一把", btnStyle))
                 {
                     BackToTitle();
                 }

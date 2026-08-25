@@ -66,16 +66,16 @@ namespace BiuBiu.UI
                 fontSize = 72,
                 fontStyle = FontStyle.Bold,
             };
-            GUI.Label(new Rect(0, Screen.height * 0.32f, Screen.width, 100), "毕毕啾啾", titleStyle);
+            GUI.Label(new Rect(0, Screen.height * 0.32f, Screen.width, 100), "在哪跌倒就在哪躺会儿", titleStyle);
 
-            // 副标题
+            // 署名
             var subStyle = new GUIStyle(GUI.skin.label)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontSize = 24,
             };
             GUI.Label(new Rect(0, Screen.height * 0.32f + 110, Screen.width, 40),
-                "—— 弹幕生存 · 按住左键拉弓蓄力，松手发射 ——", subStyle);
+                "——李雷", subStyle);
 
             // 开始提示（延迟淡入 + 呼吸）
             if (elapsed >= HintDelay)

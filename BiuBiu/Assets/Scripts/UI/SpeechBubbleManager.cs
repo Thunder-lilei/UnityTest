@@ -180,6 +180,8 @@ namespace BiuBiu.UI
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, col);
             tex.Apply();
+            // 跨场景重载存活：静态样式缓存的纹理若不被标记，LoadScene 后会被 Unity 卸载导致底色变透明
+            tex.hideFlags = HideFlags.HideAndDontSave;
             return tex;
         }
     }
