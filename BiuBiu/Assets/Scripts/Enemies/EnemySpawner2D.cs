@@ -403,7 +403,7 @@ namespace BiuBiu.Enemies
             var pm = new UnityEngine.PhysicsMaterial2D("EnemyNoFriction") { friction = 0f, bounciness = 0f };
             col.sharedMaterial = pm;
             go.SetActive(false);
-            UnityEngine.Object.DontDestroyOnLoad(go);
+            // 模板留在活动场景（不 DDOL）：clone 随 LoadScene 卸载自动清理，杜绝跨局残留（static 引用自愈重建）
             return go;
         }
     }

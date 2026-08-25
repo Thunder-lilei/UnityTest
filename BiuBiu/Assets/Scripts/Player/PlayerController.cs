@@ -80,6 +80,10 @@ namespace BiuBiu.Player
 
         private void OnEnable()
         {
+            // 整个输入资产启用：LoadScene 重开时旧玩家 OnDisable 可能在新玩家 OnEnable 之后执行，
+            // 仅 Enable 单个动作会被旧玩家的 Disable 抵消（表现为需攻击一次才恢复移动）；
+            // 资产级 Enable 保证 Move/Roll/Fire 全部就绪（幂等安全）
+            if (actions != null) actions.Enable();
             if (moveAction != null) moveAction.Enable();
             if (rollAction != null) rollAction.Enable();
         }
@@ -102,8 +106,9 @@ namespace BiuBiu.Player
 
         private void OnDisable()
         {
-            if (moveAction != null) moveAction.Disable();
-            if (rollAction != null) rollAction.Disable();
+            // 不在此 Disable 输入动作：InputActionAsset 是跨玩家实例共享的资源，
+            // 旧玩家销毁时 Disable 会残留禁用新玩家的动作（重开后需攻击一次才恢复移动）。
+            // 输入资产生命周期由 Input System 统一管理（编辑器停止时自动复位）。
         }
 
         private void Update()
@@ -333,14 +338,12 @@ namespace BiuBiu.Player
             camOriginalSize = mainCam != null ? mainCam.orthographicSize : 9f;
         }
 
-        /// <summary>死亡演出结束：停表结算+弹战报（GameBootstrap.EndRun → BattleReport → DeathPanel）</summary>
+        /// <summary>死亡演出结束：停表结算 + 直接播放结尾标题卡（不再弹战报菜单，按任意键/点击重开一局）</summary>
         private void FinishDeath()
         {
-            Time.timeScale = 1f; // 恢复正常流速（战报面板自身不需要慢动作）
-            BattleReport report = GameBootstrap.Instance != null
-                ? GameBootstrap.Instance.EndRun()
-                : default;
-            DeathPanel.Show(report);
+            Time.timeScale = 1f; // 恢复正常流速
+            if (GameBootstrap.Instance != null) GameBootstrap.Instance.EndRun(); // 结算本局（累计统计）
+            TitleScreen.Show(); // 直接显示死亡标题卡（「在哪跌倒就在哪躺会儿 ——李雷」），按键即重开
         }
 
         // ==================== 翻滚残影（M2：位置残影序列） ====================

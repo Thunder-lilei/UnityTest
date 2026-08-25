@@ -31,7 +31,7 @@ namespace BiuBiu.Effects
                 sr.sortingOrder = 5;
                 shardTemplate.AddComponent<BreakShard>();
                 shardTemplate.SetActive(false);           // 模板统一禁用态
-                Object.DontDestroyOnLoad(shardTemplate);  // 跨场景/热重载保留
+                // 模板留在活动场景（不 DDOL）：随 LoadScene 卸载自动清理，杜绝跨局残留（static 引用自愈重建）
             }
             return shardTemplate;
         }

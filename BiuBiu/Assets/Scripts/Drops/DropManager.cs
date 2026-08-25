@@ -59,7 +59,7 @@ namespace BiuBiu.Drops
                     var sr = stainTemplate.GetComponent<SpriteRenderer>();
                     sr.sortingOrder = 1; // 地面(0)之上、其他一切之下
                     stainTemplate.SetActive(false);
-                    DontDestroyOnLoad(stainTemplate);
+                    // 模板留在活动场景（不 DDOL）：随 LoadScene 卸载自动清理，杜绝跨局残留
                 }
                 return stainTemplate;
             }

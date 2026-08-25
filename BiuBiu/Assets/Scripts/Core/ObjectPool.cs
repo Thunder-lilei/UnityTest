@@ -29,7 +29,8 @@ namespace BiuBiu.Core
                 {
                     var go = new GameObject("[ObjectPool]");
                     go.SetActive(false); // 整树禁用：子实例不再消耗 Update/渲染
-                    Object.DontDestroyOnLoad(go);
+                    // 池根留在当前活动场景（不 DDOL）：重开 LoadScene 时随场景卸载，
+                    // 闲置实例连同模板一起被自动清理，杜绝跨局残留（static 引用自愈重建）
                     poolRoot = go.transform;
                 }
                 return poolRoot;

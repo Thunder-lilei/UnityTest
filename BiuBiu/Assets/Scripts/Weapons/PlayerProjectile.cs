@@ -53,7 +53,9 @@ namespace BiuBiu.Weapons
                     tr.sortingOrder = 18;            // 略低于弹丸本体(20)，拖尾在弹丸下方
                     tr.enabled = false;          // 默认禁用，Launch 时启用并配置
                     template.SetActive(false);
-                    Object.DontDestroyOnLoad(template);
+                    // 模板留在活动场景（不 DDOL）：Instantiate 的 clone 落在模板所在场景，
+                    // DDOL 模板的 clone 会进 DontDestroyOnLoad 场景导致重开后残留上一局弹丸；
+                    // 留在活动场景则随 LoadScene 卸载自动清理（static 引用自愈重建）
                 }
                 return template;
             }
