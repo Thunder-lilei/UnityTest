@@ -95,10 +95,21 @@ namespace BiuBiu.Core
 
         /// <summary>
         /// 清空全部池（局结束/再来一局时调用：销毁全部池实例与根物体，防止跨局残留）。
-        /// 注意：只清池内闲置实例；场上仍在使用的实例由各自 Manager 负责先 Release/销毁。
+        /// 关键：除池内闲置实例外，也销毁 Root 下仍活跃（未回池）的实例——如上一局飞行中未命中回收的弹丸、
+        /// 还在场上的碎片等。这些实例挂在 DontDestroyOnLoad 的池根下，LoadScene 重载场景不会销毁它们，
+        /// 若不在此主动清理，会活到下一局继续 Update 并误伤玩家。
         /// </summary>
         public static void ClearAll()
         {
+            if (poolRoot != null)
+            {
+                // 先销毁 Root 下所有活跃（未回池）子实例
+                for (int i = poolRoot.childCount - 1; i >= 0; i--)
+                {
+                    var child = poolRoot.GetChild(i);
+                    if (child != null) Object.Destroy(child.gameObject);
+                }
+            }
             foreach (var stack in pools.Values)
             {
                 while (stack.Count > 0)

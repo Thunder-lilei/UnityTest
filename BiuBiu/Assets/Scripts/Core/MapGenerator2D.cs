@@ -203,10 +203,10 @@ namespace BiuBiu.Core
                 }
                 marbleTexture.SetPixels32(px);
                 marbleTexture.Apply();
-                }
-                var ms = Sprite.Create(marbleTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
-                ms.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
-                return ms;
+            }
+            var ms = Sprite.Create(marbleTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+            ms.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
+            return ms;
         }
 
         private static Tile CreateTile(Sprite sprite)
@@ -249,10 +249,10 @@ namespace BiuBiu.Core
                 }
                 groundTexture.SetPixels32(px);
                 groundTexture.Apply();
-                }
-                var gs = Sprite.Create(groundTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
-                gs.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
-                return gs;
+            }
+            var gs = Sprite.Create(groundTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+            gs.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
+            return gs;
         }
 
         /// <summary>将形状旋转 rot×90°（围绕原点顺时针）</summary>

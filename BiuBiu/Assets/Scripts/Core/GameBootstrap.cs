@@ -152,7 +152,7 @@ namespace BiuBiu.Core
             RunStats = new RunStats();
             PlayerStats = new PlayerStats(); // 成长属性随每局重建（重开零成本）
             IsRunActive = true;
-            ObjectPool.ClearAll(); // 清掉上局回池的闲置实例（活跃实例已随场景卸载销毁）
+            ObjectPool.ClearAll(); // 清掉上局全部池实例（含仍活跃未回收的弹丸/碎片），杜绝跨局残留误伤
         }
 
         /// <summary>
