@@ -95,7 +95,8 @@ namespace BiuBiu.Weapons
                 if (newLevel != chargeLevel)
                 {
                     chargeLevel = newLevel;
-                    if (trauma != null && chargeLevel > 0)
+                    // 屏幕震动关闭时不叠加蓄力抖动（与 CameraTrauma 开关双保险，源头拦截）
+                    if (trauma != null && chargeLevel > 0 && SettingsPanel.ScreenShakeEnabled)
                         trauma.AddTrauma(0.05f * chargeLevel);
                 }
 
@@ -103,7 +104,8 @@ namespace BiuBiu.Weapons
                 if (chargeLevel >= 2)
                 {
                     overchargeTimer += Time.deltaTime;
-                    if (trauma != null)
+                    // 屏幕震动关闭时满蓄抖动直接不触发（与 CameraTrauma 开关双保险）
+                    if (trauma != null && SettingsPanel.ScreenShakeEnabled)
                     {
                         // 目标 trauma 随过载时间从 0.45 爬升到 0.95（越久越抖），每帧向目标逼近，自然衰减也补偿
                         float target = Mathf.Clamp(0.45f + overchargeTimer * GameBalance.OverchargeTraumaPerSecond, 0.45f, 0.95f);
@@ -212,7 +214,8 @@ namespace BiuBiu.Weapons
             // 发射吐槽气泡（设计文档 14.x，可选）
             SpeechBubbleManager.Say(transform, SpeakerType.Player, SpeechEvent.Attack);
 
-            if (trauma != null) trauma.AddTrauma(0.1f * level);
+            // 发射抖动同样受屏幕震动开关控制
+            if (trauma != null && SettingsPanel.ScreenShakeEnabled) trauma.AddTrauma(0.1f * level);
 
             // 发射后坐力：沿瞄准反方向短促回弹，幅度随蓄力档位递增（PlayerController 接管位移）
             var player = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;

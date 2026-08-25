@@ -4,14 +4,13 @@ using UnityEngine;
 namespace BiuBiu.UI
 {
     /// <summary>
-    /// 设置面板（M2 提前做；文案文档 U07a~U07e）。
-    /// 四项功能：屏幕震动开关 / 慢动作演出开关 / 开发者模式无敌开关 / 改键入口。
+    /// 设置面板（M2 提前做；文案文档 U07a~U07c）。
+    /// 三项功能：屏幕震动开关 / 慢动作演出开关 / 开发者模式无敌开关。
     /// 开关状态持久化（PlayerPrefs）；从暂停菜单「设置」按钮进入，返回时回暂停菜单。
     /// 灰盒 OnGUI 框架内实现，不迁移 UI 框架。
     /// </summary>
-    public class SettingsPanel : MonoBehaviour
+    public class SettingsPanel
     {
-        private static SettingsPanel instance;
         private static bool visible;
 
         // ---- 持久化设置键 ----
@@ -19,14 +18,9 @@ namespace BiuBiu.UI
         private const string KeySlowmo = "Setting_Slowmo";
         // 开发者模式已有 DeveloperMode.GodMode 静态字段，F3 切换；此面板读写同一状态
 
-        // ---- 改键状态 ----
-        private bool rebindMode;
-        private string rebindActionName;
-
         /// <summary>显示设置面板</summary>
         public static void Show()
         {
-            EnsureInstance();
             visible = true;
             // 设置面板打开时不算 Pause/Upgrade/Death，不设 GameState 标志
             // （已在暂停菜单内=timeScale=0，Update/OnGUI 照常走）
@@ -36,18 +30,9 @@ namespace BiuBiu.UI
         public static void Hide()
         {
             visible = false;
-            instance.rebindMode = false;
         }
 
         public static bool IsVisible => visible;
-
-        private static void EnsureInstance()
-        {
-            if (instance != null) return;
-            var go = new GameObject("[SettingsPanel]");
-            instance = go.AddComponent<SettingsPanel>();
-            DontDestroyOnLoad(go);
-        }
 
         /// <summary>屏幕震动是否启用（CameraTrauma 读取）</summary>
         public static bool ScreenShakeEnabled
@@ -63,7 +48,11 @@ namespace BiuBiu.UI
             set => PlayerPrefs.SetInt(KeySlowmo, value ? 1 : 0);
         }
 
-        private void OnGUI()
+        /// <summary>
+        /// 绘制设置面板（由 PauseMenu.OnGUI 在主面板之后调用，保证层级在主面板之上）。
+        /// 自身为模态层：全屏遮罩 + 控件，吃掉本帧事件避免穿透到暂停主面板。
+        /// </summary>
+        public static void Draw()
         {
             if (!visible) return;
 
@@ -74,7 +63,7 @@ namespace BiuBiu.UI
             GUI.color = prev;
 
             // 面板
-            float panelW = 480f, panelH = 420f;
+            float panelW = 480f, panelH = 360f;
             Rect panel = new Rect((Screen.width - panelW) * 0.5f, (Screen.height - panelH) * 0.5f, panelW, panelH);
             GUI.Box(panel, string.Empty);
 
@@ -117,38 +106,15 @@ namespace BiuBiu.UI
             }
             y += 50f;
 
-            // 改键入口（文案文档 U07d）
-            if (GUI.Button(new Rect(leftX, y, 200f, 32f), "改键", btnStyle))
-            {
-                rebindMode = true;
-                rebindActionName = "Move"; // 先做移动键改键示范，后续扩展
-            }
-            if (rebindMode)
-            {
-                GUI.Label(new Rect(panel.x + 260f, y, 200f, 32f), "按下新按键…（ESC 取消）", labelStyle);
-                if (Event.current.isKey && Event.current.type == EventType.KeyDown)
-                {
-                    if (Event.current.keyCode == KeyCode.Escape)
-                    {
-                        rebindMode = false;
-                    }
-                    else
-                    {
-                        // 记录到 PlayerPrefs（改键底座 M0-6 Input System，此为 UI 入口）
-                        PlayerPrefs.SetString("Rebind_" + rebindActionName, Event.current.keyCode.ToString());
-                        PlayerPrefs.Save();
-                        rebindMode = false;
-                    }
-                }
-            }
-            y += 60f;
-
             // 返回按钮（文案文档 U07e）
             if (GUI.Button(new Rect(panel.x + panelW * 0.5f - 60f, y, 120f, 40f), "返回", btnStyle))
             {
                 Hide();
                 // 返回暂停菜单（PauseMenu 仍在暂停态，直接恢复其显示）
             }
+
+            // 吃掉本帧事件，确保点击遮罩/空白区域不会穿透到下层暂停主面板
+            if (Event.current.type == EventType.MouseDown) Event.current.Use();
         }
     }
 }

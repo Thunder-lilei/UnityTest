@@ -101,21 +101,19 @@ namespace BiuBiu.UI
             float bw = 260f, bh = 52f, bx = panel.x + (panel.width - bw) * 0.5f;
             float btnAlpha = Mathf.Clamp01((t - 0.2f) * 2f);
 
-            // 统计记录子面板为模态层：打开时屏蔽主面板按钮（否则同一 Event.current
-            // 会先被子面板「返回」消费后，再穿透命中主面板「回到标题」等按钮）
-            if (btnAlpha > 0.3f && !showStats)
+            // 任一子面板（统计/设置）为模态层：打开时屏蔽主面板按钮，避免事件穿透到主面板
+            bool subPanelOpen = showStats || SettingsPanel.IsVisible;
+            if (btnAlpha > 0.3f && !subPanelOpen)
             {
                 if (GUI.Button(new Rect(bx, panel.y + 110f, bw, bh), "继续", btnStyle)) Resume();
                 if (GUI.Button(new Rect(bx, panel.y + 180f, bw, bh), "重新开始", btnStyle)) Restart();
                 if (GUI.Button(new Rect(bx, panel.y + 250f, bw, bh), "回到标题", btnStyle)) BackToTitle();
 
-                // 设置按钮（接入设置面板 SettingsPanel）
-                GUI.enabled = !SettingsPanel.IsVisible;
+                // 设置按钮（接入设置面板 SettingsPanel；打开后由下方 SettingsPanel.Draw 模态绘制）
                 if (GUI.Button(new Rect(bx, panel.y + 320f, bw, bh), "设置", btnStyle))
                 {
                     SettingsPanel.Show();
                 }
-                GUI.enabled = true;
 
                 // 统计记录按钮（查看历史最佳：最大轮次 / 最多击杀）
                 if (GUI.Button(new Rect(bx, panel.y + 390f, bw, bh), "统计记录", btnStyle))
@@ -123,6 +121,9 @@ namespace BiuBiu.UI
                     showStats = true;
                 }
             }
+
+            // ---- 设置子面板（ESC 暂停菜单内；模态层，由 PauseMenu 统一调度绘制，层级在主面板之上） ----
+            SettingsPanel.Draw();
 
             // ---- 统计记录子面板（ESC 暂停菜单内，查看两项历史最佳；模态层，遮蔽主面板） ----
             if (showStats)

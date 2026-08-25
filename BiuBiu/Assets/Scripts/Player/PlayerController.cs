@@ -315,7 +315,11 @@ namespace BiuBiu.Player
             foreach (var r in renderers) r.enabled = false;
             var childRenderers = GetComponentsInChildren<Renderer>();
             foreach (var r in childRenderers) r.enabled = false;
-            Time.timeScale = GameBalance.DeathSlowmoScale; // 慢动作 0.2
+            // 慢动作演出（设计文档「慢动作演出」开关 / 数值文档）：开关关闭则不进入慢动作，
+            // 死亡演出仍按 unscaledDeltaTime 正常推进（镜头聚焦照常），仅去掉时间压低观感
+            Time.timeScale = BiuBiu.UI.SettingsPanel.SlowmoEnabled
+                ? GameBalance.DeathSlowmoScale
+                : 1f;
             deathTimer = GameBalance.DeathSlowmoDuration;
             deathZoomLerp = 0f;
             camOriginalSize = mainCam != null ? mainCam.orthographicSize : 9f;

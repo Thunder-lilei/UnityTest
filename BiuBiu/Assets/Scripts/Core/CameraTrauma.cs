@@ -90,6 +90,16 @@ namespace BiuBiu.Core
                 for (int i = 0; i < 3; i++) seeds[i] = Random.value * 100f;
             }
 
+            // 0) 屏幕震动开关：关闭时即时停震（清零残留 trauma，避免「关了还在抖」的观感）
+            if (BiuBiu.UI.SettingsPanel.ScreenShakeEnabled == false)
+            {
+                trauma = 0f;
+                transform.localPosition -= lastPosOffset;
+                transform.localRotation = baseLocalRot;
+                lastPosOffset = Vector3.zero;
+                return;
+            }
+
             // 1) 撤销上一帧偏移：还原到逻辑位置（CameraFollow 的跟随结果/初始位置）
             transform.localPosition -= lastPosOffset;
             transform.localRotation = baseLocalRot;
