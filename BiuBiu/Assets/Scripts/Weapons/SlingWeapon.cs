@@ -195,6 +195,21 @@ namespace BiuBiu.Weapons
             if (pc != null && pc.Rb != null) pc.Rb.velocity = Vector2.zero;
         }
 
+        private void OnDisable()
+        {
+            // 玩家实例销毁/场景卸载时复位 static 蓄力状态：
+            // 上一局死亡时若仍按住左键蓄力，IsCharging=true 会跨局残留到新玩家——
+            // 新玩家移动被 PlayerController「蓄力冻结」分支卡住（表现为需攻击一次才恢复移动）。
+            // 不走 CancelCharge（避免销毁时序下访问已销毁的子物体/旧玩家刚体），直接重置。
+            isCharging = false;
+            IsCharging = false;
+            ChargePullVelocity = Vector2.zero;
+            overchargeTimer = 0f;
+            overchargeWarned = false;
+            if (chargeOrb != null) chargeOrb.enabled = false;
+            AudioManager.StopLoop(); // 停掉可能仍在循环的蓄力音（AudioManager 常驻单例，安全）
+        }
+
         /// <summary>发射弹丸（三档：0=白速射/1=黄/2=红，档位由实际蓄力时长决定）</summary>
         private void Fire(Vector2 aimDir)
         {

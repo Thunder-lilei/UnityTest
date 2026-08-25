@@ -152,6 +152,12 @@ namespace BiuBiu.Core
             RunStats = new RunStats();
             PlayerStats = new PlayerStats(); // 成长属性随每局重建（重开零成本）
             IsRunActive = true;
+            // 复位全局面板/输入锁 static 标志：上一局以任何状态结束（暂停中重开/战报残留等）
+            // 都不影响新局——「重开 = 全新一局」的完整语义
+            GameState.Paused = false;
+            GameState.DeathReportOpen = false;
+            GameState.SuppressFireUntilRelease = false;
+            Time.timeScale = 1f; // 上一局死亡慢动作/暂停残留的 timeScale 也一并复位
             ObjectPool.ClearAll(); // 清掉上局全部池实例（含仍活跃未回收的弹丸/碎片），杜绝跨局残留误伤
         }
 
