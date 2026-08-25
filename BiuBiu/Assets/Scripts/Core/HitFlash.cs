@@ -39,7 +39,11 @@ namespace BiuBiu.Core
                 if (s_flashMaterial == null)
                 {
                     var sha = Shader.Find("Biubiu/SpriteFlash");
-                    if (sha != null) s_flashMaterial = new Material(sha);
+                    if (sha != null)
+                    {
+                        s_flashMaterial = new Material(sha);
+                        s_flashMaterial.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（static 共享闪白材质）
+                    }
                 }
                 if (s_flashMaterial != null)
                     targetRenderer.material = s_flashMaterial;

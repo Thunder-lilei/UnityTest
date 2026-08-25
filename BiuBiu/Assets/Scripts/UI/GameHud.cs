@@ -111,6 +111,7 @@ namespace BiuBiu.UI
         {
             int s = 32;
             var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（HUD 常驻，static 纹理缓存）
             tex.filterMode = FilterMode.Point;
             var px = new Color32[s * s];
             for (int i = 0; i < px.Length; i++) px[i] = new Color32(0, 0, 0, 0);
@@ -166,6 +167,7 @@ namespace BiuBiu.UI
             const float rOut = 30f;   // 外半径
             const float rIn = 22f;    // 内半径（环宽 8px）
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（底环/进度环 static 缓存）
             var cols = new Color[size * size];
             float cx = (size - 1) * 0.5f;
             float cy = (size - 1) * 0.5f;
@@ -400,6 +402,7 @@ namespace BiuBiu.UI
         {
             int s = 32;
             var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（屏幕外指示三角 static 缓存）
             Color transparent = new Color(0, 0, 0, 0);
             Color white = Color.white;
             Vector2 a = new Vector2(4, 6);    // 左下

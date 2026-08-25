@@ -184,6 +184,7 @@ namespace BiuBiu.Core
             {
                 int size = 32;
                 marbleTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                marbleTexture.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（地图瓦片 static 缓存）
                 marbleTexture.filterMode = FilterMode.Point;
                 var px = new Color32[size * size];
                 var rnd = new System.Random(42);
@@ -202,8 +203,10 @@ namespace BiuBiu.Core
                 }
                 marbleTexture.SetPixels32(px);
                 marbleTexture.Apply();
-            }
-            return Sprite.Create(marbleTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+                }
+                var ms = Sprite.Create(marbleTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+                ms.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
+                return ms;
         }
 
         private static Tile CreateTile(Sprite sprite)
@@ -226,6 +229,7 @@ namespace BiuBiu.Core
             {
                 int size = 32;
                 groundTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                groundTexture.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（地图瓦片 static 缓存）
                 groundTexture.filterMode = FilterMode.Point;
                 var px = new Color32[size * size];
                 var rnd = new System.Random(7);
@@ -245,8 +249,10 @@ namespace BiuBiu.Core
                 }
                 groundTexture.SetPixels32(px);
                 groundTexture.Apply();
-            }
-            return Sprite.Create(groundTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+                }
+                var gs = Sprite.Create(groundTexture, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32f);
+                gs.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
+                return gs;
         }
 
         /// <summary>将形状旋转 rot×90°（围绕原点顺时针）</summary>

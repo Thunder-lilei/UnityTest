@@ -44,6 +44,8 @@ namespace BiuBiu.Core
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
+            // 跨场景重载存活：static 工厂缓存的纹理若不被标记，LoadScene 后会被 Unity 卸载，导致所有灰盒 Sprite 失效
+            tex.hideFlags = HideFlags.HideAndDontSave;
             var px = new Color32[size * size];
             float c = (size - 1) * 0.5f;
             for (int y = 0; y < size; y++)
@@ -62,7 +64,9 @@ namespace BiuBiu.Core
             tex.SetPixels32(px);
             tex.Apply();
             // PPU 32：Sprite 世界尺寸 = 32/32 = 1 tile（像素风基线）
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 32f);
+            var sp = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 32f);
+            sp.hideFlags = HideFlags.HideAndDontSave; // 与纹理一同跨场景存活
+            return sp;
         }
 
         /// <summary>

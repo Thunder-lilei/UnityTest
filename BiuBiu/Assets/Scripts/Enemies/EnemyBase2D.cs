@@ -603,6 +603,7 @@ namespace BiuBiu.Enemies
         {
             int size = 64;
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（Boss 扇形预警纹理 static 缓存）
             tex.filterMode = FilterMode.Point;
             float half = sweepAngle * 0.5f;
             // 当前已填充的角度范围（从 -half 逐步扩展到 +half）

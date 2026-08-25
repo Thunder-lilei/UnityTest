@@ -112,6 +112,7 @@ namespace BiuBiu.UI
         {
             int size = textureSize;
             vignetteTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            vignetteTexture.hideFlags = HideFlags.HideAndDontSave; // 跨场景重载存活（受击暗角纹理缓存）
             vignetteTexture.filterMode = FilterMode.Bilinear;
 
             float center = (size - 1f) * 0.5f;
