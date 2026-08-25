@@ -68,7 +68,6 @@ namespace BiuBiu.Core
             else
             {
                 inst = Object.Instantiate(prefab, position, rotation);
-                inst.transform.SetParent(Root, false); // 挂到池根（DDOL），确保 ClearAll 能清到活跃实例（飞行中未回收的弹丸）
                 inst.SetActive(true); // 模板统一为禁用态（SetActive(false)+DontDestroyOnLoad），Instantiate 复制该状态——不激活则实例不可见、Update 不跑
                 sourceMap[inst] = prefab;
             }
