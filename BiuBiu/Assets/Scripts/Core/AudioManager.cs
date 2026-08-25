@@ -66,6 +66,29 @@ namespace BiuBiu.Core
             mgr._source.PlayOneShot(clip, volumeScale);
         }
 
+        /// <summary>
+        /// 播放世界音效，但仅当发声点在主摄像机视口内（含边距）才播放。
+        /// 用于敌人受击/死亡、撞墙、可破坏物碎裂等环境音：发生在角色视野之外则静音，
+        /// 避免玩家听到屏幕外无法对应来源的声响（听觉信息与视觉一致）。
+        /// margin 为视口外向外的容差（视口坐标 0~1 之外再多出的比例），默认 0.05。
+        /// </summary>
+        public static void PlayWorld(string clipName, Vector3 worldPos, float volumeScale = 1f, float margin = 0.05f)
+        {
+            // 无主摄像机时退化为普通播放（调试/特殊场景）
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                Vector3 vp = cam.WorldToViewportPoint(worldPos);
+                // z<=0 表示在摄像机后方，必然不可见；x/y 超出 [−margin, 1+margin] 视为视野外
+                bool inView = vp.z > 0f
+                              && vp.x >= -margin && vp.x <= 1f + margin
+                              && vp.y >= -margin && vp.y <= 1f + margin;
+                if (!inView) return;
+            }
+
+            Play(clipName, volumeScale);
+        }
+
         private AudioClip LoadClip(string clipName)
         {
             if (_cache.TryGetValue(clipName, out var cached)) return cached;

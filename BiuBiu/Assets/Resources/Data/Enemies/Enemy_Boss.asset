@@ -41,13 +41,13 @@ MonoBehaviour:
   lineCooldown: 0
   bulletRadius: 0.3
   sweepWindup: 0.6
-  sweepInterval: 3
+  sweepInterval: 1.5
   sweepRadius: 4
   sweepAngle: 120
   sweepDirections: 8
   sweepBulletSpeed: 3
-  bossChargeWindup: 0.6
+  bossChargeWindup: 0.45
   bossChargeSpeed: 8
   bossChargeDistance: 18
-  bossChargeCooldown: 6
+  bossChargeCooldown: 2.5
   bossChargeKnockback: 1.5

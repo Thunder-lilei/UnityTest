@@ -44,6 +44,12 @@ namespace BiuBiu.Enemies
         /// <summary>接触伤害结算计时（0.5s 一跳）</summary>
         private float contactTimer;
 
+        /// <summary>直线冲撞连击剩余次数（冲撞跑完后 >0 则再接一发，制造连续压迫）</summary>
+        private int chargeComboLeft;
+
+        /// <summary>是否进入二阶段狂暴（血量低于 BossEnrageThreshold 时触发一次）</summary>
+        private bool enraged;
+
         /// <summary>八方向扇形横扫预警：8 个扇区填充（红，半透明）</summary>
         private SpriteRenderer[] sweepFill;
 
@@ -99,6 +105,8 @@ namespace BiuBiu.Enemies
             chargeRemaining = 0f;
             chargeHitPlayer = false;
             contactTimer = 0f;
+            chargeComboLeft = 0;
+            enraged = false;
 
             // 预警渲染器（Boss 攻击范围可视化，让玩家预判闪避）
             sweepOutline = CreateWarningLine("BossSweepOutline", true);
@@ -132,6 +140,16 @@ namespace BiuBiu.Enemies
             float dist = toPlayer.magnitude;
             float progress = 0f; // 前摇进度（SweepWindup/ChargeWindup 复用）
 
+            // 二阶段狂暴：血量跌破阈值时触发一次（连冲↑、移速↑、冲撞冷却↓）
+            if (!enraged && (float)GetCurrentHealth() / GetMaxHealth() <= GameBalance.BossEnrageThreshold)
+            {
+                enraged = true;
+                if (CameraTrauma.Instance != null)
+                    CameraTrauma.Instance.AddTrauma(GameBalance.TraumaBossSpawn * 0.6f); // 狂暴轻震屏
+            }
+            float curMoveSpeed = Data.moveSpeed * (enraged ? GameBalance.BossEnrageMoveScale : 1f);
+            float curChargeCooldown = Data.bossChargeCooldown * (enraged ? GameBalance.BossEnrageCooldownScale : 1f);
+
             // 接触伤害由基类 ContactDamageTick 处理（Data.contactTickInterval=0.5）
 
             bossTimer -= Time.deltaTime;
@@ -156,9 +174,13 @@ namespace BiuBiu.Enemies
 
                 case BossState.WaitAfterSweep:
                     // 慢速逼近（技能间隙保持移动压迫走位）
-                    Rb.velocity = dist > 1f ? toPlayer.normalized * Data.moveSpeed : Vector2.zero;
+                    Rb.velocity = dist > 1f ? toPlayer.normalized * curMoveSpeed : Vector2.zero;
                     if (bossTimer <= 0f)
                     {
+                        // 进入冲撞前摇；普通阶段随机追加连冲次数，狂暴阶段强制至少 1 发（制造连续压迫）
+                        chargeComboLeft = enraged
+                            ? 1 + Random.Range(0, GameBalance.BossChargeComboMax)
+                            : Random.Range(0, GameBalance.BossChargeComboMax + 1);
                         bossState = BossState.ChargeWindup;
                         bossTimer = Data.bossChargeWindup;
                     }
@@ -198,13 +220,23 @@ namespace BiuBiu.Enemies
                     if (chargeRemaining <= 0f)
                     {
                         Rb.velocity = Vector2.zero;
-                        bossState = BossState.WaitAfterCharge;
-                        bossTimer = Data.bossChargeCooldown;
+                        if (chargeComboLeft > 0)
+                        {
+                            // 连冲：短冷却后再次锁定玩家冲撞（每次方向重新锁定，逼迫连续走位）
+                            chargeComboLeft--;
+                            bossState = BossState.ChargeWindup;
+                            bossTimer = Data.bossChargeWindup * 0.7f; // 连击前摇略短，节奏更紧
+                        }
+                        else
+                        {
+                            bossState = BossState.WaitAfterCharge;
+                            bossTimer = curChargeCooldown;
+                        }
                     }
                     break;
 
                 case BossState.WaitAfterCharge:
-                    Rb.velocity = dist > 1f ? toPlayer.normalized * Data.moveSpeed : Vector2.zero;
+                    Rb.velocity = dist > 1f ? toPlayer.normalized * curMoveSpeed : Vector2.zero;
                     if (bossTimer <= 0f)
                     {
                         bossState = BossState.SweepWindup;

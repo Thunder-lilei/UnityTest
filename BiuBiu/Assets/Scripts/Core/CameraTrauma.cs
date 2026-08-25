@@ -34,10 +34,15 @@ namespace BiuBiu.Core
         /// <summary>全局访问点（命中微震/受击强震等由各系统调用）</summary>
         public static CameraTrauma Instance { get; private set; }
 
+        /// <summary>当前 trauma 值（0~1），供外部做目标趋近式叠加（如满蓄力过载抖动）</summary>
+        public float CurrentTrauma => trauma;
+
         private float trauma;               // 当前 trauma 值 0~1
         private Quaternion baseLocalRot;    // 相机初始局部旋转（旋转基准恒定，直接复位消浮点误差）
         private Vector3 lastPosOffset;      // 上一帧叠加的位置偏移（本帧先撤销再叠新）
         private float[] seeds = new float[3]; // x/y/angle 三路噪声的独立种子（非 readonly：域重载后需重建）
+        private float curOffsetMul = 1f;    // 本帧位移倍率（仅满蓄过载路径放大，不影响其他震屏）
+        private float curAngleMul = 1f;     // 本帧旋转倍率（同上）
 
         /// <summary>初始化：单例、记录初始旋转、随机噪声种子</summary>
         private void Awake()
@@ -49,14 +54,28 @@ namespace BiuBiu.Core
         }
 
         /// <summary>
-        /// 叠加震屏
+        /// 叠加震屏（默认倍率 1，兼容既有调用）
         /// </summary>
         /// <param name="amount">trauma 增量（微震 0.2 / 强震 0.5 / 超强震 0.8）</param>
         public void AddTrauma(float amount)
         {
+            AddTrauma(amount, 1f, 1f);
+        }
+
+        /// <summary>
+        /// 叠加震屏（带位移/旋转倍率，供满蓄过载等需要更剧烈抖动但又不改变全局 maxOffset 的场景）
+        /// </summary>
+        /// <param name="amount">trauma 增量</param>
+        /// <param name="offsetMul">位移倍率（>1 放大抖动幅度，仅作用于本帧）</param>
+        /// <param name="angleMul">旋转倍率（>1 放大抖动角度，仅作用于本帧）</param>
+        public void AddTrauma(float amount, float offsetMul, float angleMul)
+        {
             // 设置面板开关：屏幕震动关闭时不叠加（M2 设置面板接入）
             if (BiuBiu.UI.SettingsPanel.ScreenShakeEnabled == false) return;
             trauma = Mathf.Clamp01(trauma + amount);
+            // 取较强的一方（同一帧若有多源叠加，取最大倍率，避免相互抵消）
+            if (offsetMul > curOffsetMul) curOffsetMul = offsetMul;
+            if (angleMul > curAngleMul) curAngleMul = angleMul;
         }
 
         /// <summary>渲染前：撤销旧偏移 → 衰减 → 叠加新偏移（每帧从逻辑位置算起，不累积）</summary>
@@ -93,10 +112,14 @@ namespace BiuBiu.Core
             float ny = Mathf.PerlinNoise(t, seeds[1]) * 2f - 1f;
             float na = Mathf.PerlinNoise(t, seeds[2]) * 2f - 1f;
 
-            // 叠加新偏移（记录在案，下一帧撤销）
-            lastPosOffset = new Vector3(nx, ny, 0f) * (maxOffset * shake);
+            // 叠加新偏移（记录在案，下一帧撤销）；本帧位移/旋转倍率仅作用于过载路径
+            lastPosOffset = new Vector3(nx, ny, 0f) * (maxOffset * shake * curOffsetMul);
             transform.localPosition += lastPosOffset;
-            transform.localRotation = baseLocalRot * Quaternion.Euler(0f, 0f, na * maxAngle * shake);
+            transform.localRotation = baseLocalRot * Quaternion.Euler(0f, 0f, na * maxAngle * shake * curAngleMul);
+
+            // 本帧倍率已消费，重置为 1（下一帧若没有过载源，则恢复默认幅度）
+            curOffsetMul = 1f;
+            curAngleMul = 1f;
         }
     }
 }

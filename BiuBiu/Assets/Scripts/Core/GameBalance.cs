@@ -121,6 +121,18 @@ namespace BiuBiu.Core
         /// <summary>Boss 八方向扇形横扫：每次朝 8 个米字方向各发一个扇形</summary>
         public const int BossSweepDirections = 8;
 
+        /// <summary>Boss 冲撞连击：单次冲撞后追加冲撞的最大次数（普通阶段 rng→0..2，二阶段强制 1..2）</summary>
+        public const int BossChargeComboMax = 2;
+
+        /// <summary>Boss 二阶段狂暴血量阈值（占当前最大血量比例）：低于该值进入狂暴（连冲↑/移速↑/冷却↓）</summary>
+        public const float BossEnrageThreshold = 0.5f;
+
+        /// <summary>Boss 二阶段狂暴移速倍率（Data.moveSpeed 乘子）</summary>
+        public const float BossEnrageMoveScale = 1.5f;
+
+        /// <summary>Boss 二阶段狂暴冲撞冷却倍率（Data.bossChargeCooldown 乘子）</summary>
+        public const float BossEnrageCooldownScale = 0.6f;
+
         // ==================== 第 6 章 时间难度曲线（仅驱动敌人血量成长） ====================
 
         /// <summary>难度级时间步长（秒）：难度级 L = floor(存活秒数 / 该值)，每 30s +1 级</summary>
@@ -196,6 +208,21 @@ namespace BiuBiu.Core
 
         /// <summary>弹弓蓄力：二级（满）蓄力时长（秒，红色）</summary>
         public const float ChargeLevel2Time = 1.0f;
+
+        /// <summary>满蓄后继续按住的最长允许时间（秒），超时强制脱手发射；防止玩家长时间挂机蓄满</summary>
+        public const float OverchargeMaxHoldTime = 2.0f;
+
+        /// <summary>满蓄后每秒叠加的 trauma 强度（随按住时间递增，体现“过载不稳”）</summary>
+        public const float OverchargeTraumaPerSecond = 0.35f;
+
+        /// <summary>满蓄过载脱手时的飞行方向随机偏移幅度（度）：脱手=手滑，红弹大幅飞偏以表现“瞄不准”</summary>
+        public const float OverchargeSpreadAngle = 40f;
+
+        /// <summary>满蓄过载抖动的位移/旋转放大倍率（仅作用于过载路径，不改全局 maxOffset，避免影响受击/击杀等其他震屏）</summary>
+        public const float OverchargeShakeMul = 2.0f;
+
+        /// <summary>满蓄后多久冒泡提示“要憋不住了！”（秒），仅触发一次</summary>
+        public const float OverchargeWarnTime = 1.0f;
 
         /// <summary>白色速射最小发射间隔（秒）：防止狂点刷爆，把白色 DPS 封顶到约 5~6，仍保留速射手感</summary>
         public const float WhiteFireCooldown = 0.18f;

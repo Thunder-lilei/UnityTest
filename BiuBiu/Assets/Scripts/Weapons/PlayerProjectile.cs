@@ -1,6 +1,6 @@
 using BiuBiu.Core;
 using BiuBiu.Enemies;
-using BiuBiu.VFX;
+using BiuBiu.Effects;
 using UnityEngine;
 
 namespace BiuBiu.Weapons
@@ -223,8 +223,8 @@ namespace BiuBiu.Weapons
         {
             // 小型白/灰碎片爆发（复用击碎特效，取墙主色灰白）
             BreakBurstManager.SpawnBreakBurst(point, velocity, Color.gray);
-            // 轻脆撞墙音（素材偏响，整体音量降至一半）
-            AudioManager.Play("wall_hit", 0.5f);
+            // 轻脆撞墙音（素材偏响，整体音量降至一半；视野外剔除）
+            AudioManager.PlayWorld("wall_hit", point, 0.5f);
             // 极轻震屏
             if (CameraTrauma.Instance != null)
                 CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitWall);

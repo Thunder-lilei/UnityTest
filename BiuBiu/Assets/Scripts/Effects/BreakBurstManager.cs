@@ -1,7 +1,7 @@
 using BiuBiu.Core;
 using UnityEngine;
 
-namespace BiuBiu.VFX
+namespace BiuBiu.Effects
 {
     /// <summary>
     /// 击碎破碎粒子管理器（轻量静态入口）。
@@ -15,7 +15,7 @@ namespace BiuBiu.VFX
 
         /// <summary>
         /// 取碎片模板（惰性创建）。
-        /// 模板复用现有像素块（GreyBoxFactory.MakeBox(1,1) 生成的 1×1 纯色方块 sprite），不引入新美术资产。
+        /// 模板复用现有像素块（GreyBoxFactory.Square 提供的 1×1 纯色方块 sprite），不引入新美术资产。
         /// 模板须保持禁用 + 跨场景不销毁，保证 ObjectPool 以它为键正确池化。
         /// </summary>
         private static GameObject GetTemplate()

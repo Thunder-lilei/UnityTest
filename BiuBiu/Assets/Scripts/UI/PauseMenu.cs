@@ -55,10 +55,12 @@ namespace BiuBiu.UI
             instance = this;
         }
 
-        /// <summary>继续：恢复 timeScale</summary>
+        /// <summary>继续：恢复 timeScale；同时关闭菜单内所有子面板，避免退出菜单后残留</summary>
         private static void Resume()
         {
             paused = false;
+            showStats = false;            // 关闭统计记录子面板
+            if (SettingsPanel.IsVisible) SettingsPanel.Hide(); // 关闭设置子面板
             GameState.Paused = false;
             Time.timeScale = 1f;
         }
@@ -99,7 +101,9 @@ namespace BiuBiu.UI
             float bw = 260f, bh = 52f, bx = panel.x + (panel.width - bw) * 0.5f;
             float btnAlpha = Mathf.Clamp01((t - 0.2f) * 2f);
 
-            if (btnAlpha > 0.3f)
+            // 统计记录子面板为模态层：打开时屏蔽主面板按钮（否则同一 Event.current
+            // 会先被子面板「返回」消费后，再穿透命中主面板「回到标题」等按钮）
+            if (btnAlpha > 0.3f && !showStats)
             {
                 if (GUI.Button(new Rect(bx, panel.y + 110f, bw, bh), "继续", btnStyle)) Resume();
                 if (GUI.Button(new Rect(bx, panel.y + 180f, bw, bh), "重新开始", btnStyle)) Restart();
@@ -120,7 +124,7 @@ namespace BiuBiu.UI
                 }
             }
 
-            // ---- 统计记录子面板（ESC 暂停菜单内，查看两项历史最佳） ----
+            // ---- 统计记录子面板（ESC 暂停菜单内，查看两项历史最佳；模态层，遮蔽主面板） ----
             if (showStats)
             {
                 Color prev2 = GUI.color;
@@ -148,6 +152,9 @@ namespace BiuBiu.UI
                 {
                     showStats = false;
                 }
+
+                // 吃掉本帧事件，确保点击子面板遮罩/空白区域不会穿透到下层主面板
+                if (Event.current.type == EventType.MouseDown) Event.current.Use();
             }
         }
 

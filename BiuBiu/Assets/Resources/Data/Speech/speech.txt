@@ -6,8 +6,9 @@
 
 # 主角
 Player.Hit : 俺不中咧！ | 痛痛痛痛痛——
-Player.RoundUp : 这波强化像没加一样 | 我好像…变强了一纳米
+Player.RoundUp : 就这？ | 太简单了吧！
 Player.Attack : 吃我一弹！ | 瞄准——发射！ | 看招！
+Player.Overcharge : 要憋不住了！
 
 # 远程敌人（直线弹）
 Ranged.Spawn : 看我抛物线 | 远程才是王道

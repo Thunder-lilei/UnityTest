@@ -20,6 +20,8 @@ namespace BiuBiu.Weapons
         private bool isCharging;
         private float chargeTimer;
         private int chargeLevel; // 0=未蓄力, 1=黄色, 2=红色
+        private float overchargeTimer; // 满蓄后继续按住的时间（超时强制脱手）
+        private bool overchargeWarned;  // 满蓄超过阈值是否已冒泡提示（只触发一次）
 
         // ---- 白色速射冷却（防止狂点刷爆 DPS；黄色/红色照常无此限制） ----
         private float lastFireTime = -10f;
@@ -94,6 +96,40 @@ namespace BiuBiu.Weapons
                         trauma.AddTrauma(0.05f * chargeLevel);
                 }
 
+                // 满蓄力持续抖动 + 超时脱手：按住越久越不稳，超过阈值强制发射（防止挂机蓄满）
+                if (chargeLevel >= 2)
+                {
+                    overchargeTimer += Time.deltaTime;
+                    if (trauma != null)
+                    {
+                        // 目标 trauma 随过载时间从 0.45 爬升到 0.95（越久越抖），每帧向目标逼近，自然衰减也补偿
+                        float target = Mathf.Clamp(0.45f + overchargeTimer * GameBalance.OverchargeTraumaPerSecond, 0.45f, 0.95f);
+                        float cur = trauma.CurrentTrauma;
+                        if (target > cur)
+                            // 过载路径用放大倍率（OverchargeShakeMul），仅增强满蓄抖动，不影响受击/击杀等其他震屏
+                            trauma.AddTrauma((target - cur) * 3f * Time.deltaTime, GameBalance.OverchargeShakeMul, GameBalance.OverchargeShakeMul);
+                    }
+
+                    // 满蓄超过 1s 冒泡提示“要憋不住了！”（仅触发一次）
+                    if (!overchargeWarned && overchargeTimer >= GameBalance.OverchargeWarnTime)
+                    {
+                        overchargeWarned = true;
+                        SpeechBubbleManager.Say(transform, SpeakerType.Player, SpeechEvent.Overcharge);
+                    }
+
+
+                    if (overchargeTimer >= GameBalance.OverchargeMaxHoldTime)
+                    {
+                        // 过载脱手 = 手滑：给瞄准方向加一个大幅度随机偏移，红弹明显飞偏以表现“瞄不准”
+                        float spread = Random.Range(-GameBalance.OverchargeSpreadAngle, GameBalance.OverchargeSpreadAngle) * Mathf.Deg2Rad;
+                        Vector2 firedDir = new Vector2(
+                            aimDir.x * Mathf.Cos(spread) - aimDir.y * Mathf.Sin(spread),
+                            aimDir.x * Mathf.Sin(spread) + aimDir.y * Mathf.Cos(spread));
+                        Fire(firedDir);
+                        CancelCharge();
+                    }
+                }
+
                 // 蓄力视觉：弹丸像弹弓皮筋被拉开——随蓄力时长从身前向瞄准反方向拉回（满蓄力封顶保持）
                 chargeOrb.enabled = true;
                 chargeDir = aimDir;
@@ -138,6 +174,8 @@ namespace BiuBiu.Weapons
             isCharging = false;
             IsCharging = false;
             chargeOrb.enabled = false;
+            overchargeTimer = 0f; // 蓄力中断/发射后重置过载计时
+            overchargeWarned = false; // 重置冒泡提示标志
             AudioManager.StopLoop(); // 终止蓄力音（发射时由发射音接续，中断时直接停）
         }
 

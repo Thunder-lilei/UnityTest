@@ -1,4 +1,4 @@
-using BiuBiu.VFX;
+using BiuBiu.Effects;
 using UnityEngine;
 
 namespace BiuBiu.Core
@@ -25,8 +25,8 @@ namespace BiuBiu.Core
 
             Vector3 pos = transform.position;
 
-            // 碎石音效
-            AudioManager.Play("stone_break");
+            // 碎石音效（视野外剔除）
+            AudioManager.PlayWorld("stone_break", pos);
 
             // 同色像素碎片爆发（墙主色取灰白）
             BreakBurstManager.SpawnBreakBurst(pos, Vector2.up, Color.gray);

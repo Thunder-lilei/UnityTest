@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace BiuBiu.VFX
+namespace BiuBiu.Effects
 {
     /// <summary>
     /// 击碎破碎碎片：单枚像素小方块。

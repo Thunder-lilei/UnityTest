@@ -34,7 +34,7 @@ BiuBiu/
 │   │   ├── Player/               # PlayerController / PlayerStats
 │   │   ├── UI/                   # GameHud / PauseMenu / SettingsPanel / DeathPanel
 │   │   ├── Weapons/              # SlingWeapon / PlayerProjectile
-│   │   ├── VFX/                  # BreakBurstManager / BreakShard（击碎同色碎片特效）
+│   │   ├── Effects/              # BreakBurstManager / BreakShard（击碎同色碎片特效，Sprite 手搓伪粒子）
 │   │   └── Drops/                # DropManager（血迹池）
 │   ├── Settings/                 # PlayerControls.inputactions
 │   └── Resources/Audio/          # 音频资产（AudioManager 运行时加载）：laser_charge/laser_fire_white·yellow·red/dodge/player_hurt/enemy_hit/enemy_shatter/enemy_death/stone_break/wall_hit（wall_hit 素材待补）

@@ -46,6 +46,12 @@ namespace BiuBiu.Enemies
         /// <summary>当前状态</summary>
         private State state;
 
+        /// <summary>是否已死亡（Die/Shatter 置位，Initialize 复位；供屏幕外箭头过滤尸体）</summary>
+        private bool isDead;
+
+        /// <summary>公开只读：是否已死亡（含击碎）。</summary>
+        public bool IsDead => isDead;
+
         /// <summary>状态计时（前摇/冷却/冲撞共用）</summary>
         private float stateTimer;
 
@@ -120,6 +126,7 @@ namespace BiuBiu.Enemies
         public void Initialize(EnemyData enemyData, int difficultyLevel)
         {
             data = enemyData;
+            isDead = false; // 池复用/重新生成时复位死亡标志（屏幕外箭头据此过滤尸体）
 
             // 血量：普通 = 基础+floor(L/4)；精英 = 基础+floor(L/2)（数值文档 6.1）
             maxHealth = data.enemyType == EnemyType.Elite
@@ -202,6 +209,18 @@ namespace BiuBiu.Enemies
             maxHealth += n;
             health += n;
             UpdateHealthBar();
+        }
+
+        /// <summary>当前血量（只读；Boss 二阶段判定用）</summary>
+        public int GetCurrentHealth()
+        {
+            return health;
+        }
+
+        /// <summary>最大血量（只读；Boss 二阶段判定用）</summary>
+        public int GetMaxHealth()
+        {
+            return maxHealth;
         }
 
         /// <summary>灰盒配色（按敌人类型；素材版被 prefab 视觉替代）</summary>
@@ -647,7 +666,7 @@ namespace BiuBiu.Enemies
             if (hitFlash != null) hitFlash.PlayFlash(0.15f);
 
             // 受击音效：仅敌人受伤（未死亡）时播放（死亡走 Die/Shatter，不播此音）
-            AudioManager.Play("enemy_hit");
+            AudioManager.PlayWorld("enemy_hit", transform.position);
 
             // 受击气泡（设计文档 14.x；血未尽才冒，避免与死亡气泡重复）
             SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Hit);
@@ -657,6 +676,7 @@ namespace BiuBiu.Enemies
         public void Shatter()
         {
             if (data == null) return;
+            isDead = true; // 满蓄力击碎：标记为死亡，屏幕外箭头不再指示
 
             // 死前隐藏蓄力扇形框（避免蓄力中被击杀时残留）
             HideWindupArc();
@@ -677,7 +697,7 @@ namespace BiuBiu.Enemies
                 CameraTrauma.Instance.AddTrauma(GameBalance.TraumaHitEnemy * 2f);
 
             // 击碎音效（红档满蓄力专属爆裂音，与普通死亡音 enemy_death 区分）
-            AudioManager.Play("enemy_shatter");
+            AudioManager.PlayWorld("enemy_shatter", transform.position);
 
             // 直接回池（无尸体）
             ObjectPool.Release(gameObject);
@@ -736,9 +756,10 @@ namespace BiuBiu.Enemies
             chainProcessedThisFlight = true; // 本次飞行只处理一次连锁
         }
 
-        /// <summary>死亡：计数+血迹+尸体留存（灰盒压扁渐隐）；精英/Boss 触发 hitstop+击杀演出</summary>
+        /// <summary>死亡：计数+血迹+ -尸体留存（灰盒压扁渐隐）；精英/Boss 触发 hitstop+击杀演出</summary>
         private void Die()
         {
+            isDead = true; // 普通击杀：标记为死亡，屏幕外箭头不再指示
             // 同步停用 AI/Think（尸体协程仍独立运行；避免尸体活跃期间占波次计数导致不进下一轮）
             enabled = false;
 
@@ -752,7 +773,7 @@ namespace BiuBiu.Enemies
             if (data != null) SpeechBubbleManager.Say(transform, ToSpeaker(data), SpeechEvent.Death);
 
             // 死亡音效（仅普通/精英/Boss 正常死亡；击碎走 Shatter 专属音，不播此音）
-            AudioManager.Play("enemy_death");
+            AudioManager.PlayWorld("enemy_death", transform.position);
 
             // 击杀计数（累计击杀数，战报/历史最佳数据源）
             GameBootstrap.Instance?.NotifyEnemyKilled(IsBoss);

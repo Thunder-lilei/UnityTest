@@ -284,6 +284,21 @@ namespace BiuBiu.Enemies
             }
         }
 
+        /// <summary>供屏幕外箭头遍历：返回所有存活（未死亡）的敌人实例</summary>
+        public static IEnumerable<EnemyBase2D> ActiveEnemies
+        {
+            get
+            {
+                if (_instance == null) yield break;
+                foreach (var e in _instance.activeEnemies)
+                {
+                    var en = e != null ? e.GetComponent<EnemyBase2D>() : null;
+                    if (en != null && e.activeInHierarchy && !en.IsDead)
+                        yield return en;
+                }
+            }
+        }
+
         /// <summary>单例引用（供 RemainingEnemies 静态读取活跃列表）</summary>
         private static EnemySpawner2D _instance;
         private void Awake() { _instance = this; }

@@ -20,7 +20,8 @@ namespace BiuBiu.Data
         Hit,     // 受击
         Attack,  // 出手
         Death,   // 死亡
-        RoundUp  // 主角每轮变强
+        RoundUp, // 主角每轮变强
+        Overcharge // 满蓄力过载（憋不住了）
     }
 
     // 单条文案条目：说话者 + 事件 + 多句候选（仅在用 SpeechBank SO 资产时填充）
