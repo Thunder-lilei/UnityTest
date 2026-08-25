@@ -166,10 +166,11 @@ namespace BiuBiu.UI
             SceneManager.LoadScene("Main");
         }
 
-        /// <summary>回到标题：Build 首场景</summary>
+        /// <summary>回到标题：Boot 重播开场卡（标题界面）</summary>
         private static void BackToTitle()
         {
             Resume();
+            TitleCard.ResetForReturnToTitle();
             SceneManager.LoadScene(0);
         }
     }

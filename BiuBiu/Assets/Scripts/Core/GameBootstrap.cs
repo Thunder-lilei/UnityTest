@@ -1,4 +1,5 @@
 using BiuBiu.Player;
+using BiuBiu.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -57,19 +58,39 @@ namespace BiuBiu.Core
         }
 
         /// <summary>
-        /// 场景加载回调：进入 Boot（首次启动或回到标题）→ 进 Main。
+        /// 场景加载回调：进入 Boot（首次启动或回到标题）→ 进 Main / 播开场卡。
         /// 首次启动时 sceneLoaded 早于 Start 触发（引擎时序），回到标题时常驻实例借此接管。
         /// </summary>
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             mainLoadQueued = false; // 任意场景加载完成即解除导航锁
-            if (scene.name == "Boot") GoToMain();
+            if (scene.name == "Boot") EnterGameOrTitle();
         }
 
         private void Start()
         {
             // 兜底通道：个别引擎时序下首场景 sceneLoaded 早于 OnEnable 注册 → Start 再试一次（已排队则去重）
-            if (SceneManager.GetActiveScene().name == "Boot") GoToMain();
+            if (SceneManager.GetActiveScene().name == "Boot") EnterGameOrTitle();
+        }
+
+        /// <summary>
+        /// Boot → 进游戏：开场电影卡（TitleCard）仅首次启动播放一次，确认后由它负责 LoadScene("Main")；
+        /// 已播放过则直接进 Main。避免 GameBootstrap 与 TitleCard 重复导航。
+        /// </summary>
+        private void EnterGameOrTitle()
+        {
+            if (mainLoadQueued) return;
+#if !UNITY_EDITOR
+            // 真机/打包：本次启动已播过 → 直接进 Main（不重复播）
+            if (TitleCard.HasPlayedThisSession)
+            {
+                GoToMain();
+                return;
+            }
+#endif
+            // 尚未播开场卡：尝试播放（编辑器下忽略"已播"强制重播以便验证）
+            TitleCard.TryPlay();
+            mainLoadQueued = true; // 锁住，等 TitleCard 确认后再导航（防 Start/sceneLoaded 双通道重入）
         }
 
         /// <summary>进 Main（单次导航；重复调用去重）</summary>

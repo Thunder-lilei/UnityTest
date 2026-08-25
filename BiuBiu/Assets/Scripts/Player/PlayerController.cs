@@ -125,11 +125,18 @@ namespace BiuBiu.Player
                 }
             }
 
-            // ---- 死亡演出：慢动作 → 镜头聚焦 → 结算+战报 ----
+            // ---- 死亡演出：慢动作 → 镜头聚焦 → 倒地保留 → 结算+战报 ----
             if (dead)
             {
                 deathTimer -= Time.unscaledDeltaTime; // 慢动作下正常计时（timeScale 被压低）
                 deathZoomLerp = Mathf.MoveTowards(deathZoomLerp, 1f, Time.unscaledDeltaTime / GameBalance.DeathSlowmoDuration);
+                // 倒地表现：缓慢侧躺（绕 z 轴 -90°）+ 去色变暗，尸体保留如敌人
+                if (sr != null)
+                {
+                    sr.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, -90f, deathZoomLerp));
+                    Color fallen = Color.Lerp(Color.white, new Color(0.55f, 0.55f, 0.55f, 0.85f), deathZoomLerp);
+                    sr.color = fallen;
+                }
                 if (mainCam != null)
                 {
                     // 镜头聚焦：正交尺寸缩至 0.6×（数值文档 9 章 DeathZoomScale）
@@ -306,15 +313,16 @@ namespace BiuBiu.Player
 
         // ==================== 死亡流程（设计文档 15 章；数值文档 9 章） ====================
 
-        /// <summary>死亡开始：本体隐藏+慢动作 0.2×（1.5s）+镜头聚焦</summary>
+        /// <summary>死亡开始：本体倒地保留+慢动作 0.2×（1.5s）+镜头聚焦（尸体如敌人一般不消失）</summary>
         private void BeginDeath()
         {
             dead = true;
-            // 隐藏本体与所有子 Renderer
-            var renderers = GetComponents<Renderer>();
-            foreach (var r in renderers) r.enabled = false;
-            var childRenderers = GetComponentsInChildren<Renderer>();
-            foreach (var r in childRenderers) r.enabled = false;
+            // 停物理与输入：尸体留在原地（不隐藏，与敌人死亡表现一致）
+            if (Rb != null)
+            {
+                Rb.velocity = Vector2.zero;
+                Rb.simulated = false; // 停掉刚体模拟，尸体静止保留
+            }
             // 慢动作演出（设计文档「慢动作演出」开关 / 数值文档）：开关关闭则不进入慢动作，
             // 死亡演出仍按 unscaledDeltaTime 正常推进（镜头聚焦照常），仅去掉时间压低观感
             Time.timeScale = BiuBiu.UI.SettingsPanel.SlowmoEnabled

@@ -131,12 +131,13 @@ namespace BiuBiu.UI
             SceneManager.LoadScene("Main");
         }
 
-        /// <summary>回到标题：Boot 场景（GameBootstrap 接管再进 Main——灰盒无开始页，M4 补）</summary>
+        /// <summary>回到标题：Boot 场景重播开场卡（标题界面）；TitleCard 重置使本次回标题真正回到标题而非直进 Main</summary>
         private static void BackToTitle()
         {
             visible = false;
             GameState.DeathReportOpen = false;
             Time.timeScale = 1f;
+            TitleCard.ResetForReturnToTitle(); // 重置：Boot→TitleCard 重新播放标题
             SceneManager.LoadScene(0); // Build 首场景 = Boot
         }
     }

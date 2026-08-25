@@ -41,6 +41,15 @@ namespace BiuBiu.Core
 
         private void Start()
         {
+#if UNITY_EDITOR
+            // 编辑器下直接 Play Main 调试时，开场卡（Boot 阶段内容）会被绕过；
+            // 此处兜底播放一次，便于验证（确认后重载 Main，届时已播过标记为真 → 正常开局）
+            if (!TitleCard.HasPlayedThisSession)
+            {
+                TitleCard.TryPlay();
+                return; // 暂不开局，等开场卡确认后由其 LoadScene("Main") 重载并正常开局
+            }
+#endif
             // 装配完成 → 开局（重载 Main=全新一局；直接 Play Main 调试时 EnsureInstance 兜底创建引导者）
             GameBootstrap.EnsureInstance().OnMainSceneReady();
         }

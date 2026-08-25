@@ -23,6 +23,7 @@ namespace BiuBiu.Core
         private Vector3 lookAheadVel; // 前瞻偏移 SmoothDamp 速度
         private Vector2 playerLastPos; // 玩家上一帧位置（算速度方向用）
         private Camera ownCamera;   // 本机 Camera（视口半宽计算用；正交）
+        private bool snapNext = true; // 首帧直接 snap 到目标（避免开场卡切场景后相机从远处滑入）
 
         private void Awake()
         {
@@ -53,7 +54,19 @@ namespace BiuBiu.Core
             Vector3 desired = new Vector3(target.position.x + lookAhead.x,
                                           target.position.y + lookAhead.y,
                                           logicPos.z);
-            logicPos = Vector3.SmoothDamp(logicPos, desired, ref velocity, smoothTime);
+
+            // 首帧（开场卡切场景后）直接 snap 到目标，无平滑滑入；开场卡黑底淡出盖住该瞬间，切换丝滑
+            if (snapNext)
+            {
+                snapNext = false;
+                logicPos = desired;
+                velocity = Vector3.zero;
+                lookAheadVel = Vector3.zero;
+            }
+            else
+            {
+                logicPos = Vector3.SmoothDamp(logicPos, desired, ref velocity, smoothTime);
+            }
 
             // ---- 地图四边 clamp（设计文档 12 章镜头边界锁定）：视口不出 80×80 地图 ----
             if (ownCamera != null && ownCamera.orthographic)

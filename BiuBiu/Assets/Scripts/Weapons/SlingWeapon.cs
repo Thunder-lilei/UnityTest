@@ -73,7 +73,8 @@ namespace BiuBiu.Weapons
             Vector2 aimDir = ((Vector2)mainCam.ScreenToWorldPoint(Input.mousePosition) - origin).normalized;
 
             // ---- 按住左键：蓄力 ----
-            if (Input.GetMouseButton(0))
+            // 开场卡跳过残留抑制：SuppressFireUntilRelease 期间不起手，直到玩家松开一次（见下方 GetMouseButtonUp 解除）
+            if (Input.GetMouseButton(0) && !GameState.SuppressFireUntilRelease)
             {
                 if (!isCharging)
                 {
@@ -166,10 +167,15 @@ namespace BiuBiu.Weapons
             }
 
             // ---- 松开左键：发射 ----
-            if (Input.GetMouseButtonUp(0) && isCharging)
+            if (Input.GetMouseButtonUp(0))
             {
-                Fire(aimDir);
-                CancelCharge();
+                // 开场卡跳过残留抑制：玩家松开一次后即解除，恢复左键攻击（无论是否正在蓄力）
+                GameState.SuppressFireUntilRelease = false;
+                if (isCharging)
+                {
+                    Fire(aimDir);
+                    CancelCharge();
+                }
             }
         }
 

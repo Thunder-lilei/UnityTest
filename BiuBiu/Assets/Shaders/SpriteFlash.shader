@@ -63,8 +63,11 @@ Shader "Biubiu/SpriteFlash"
 
             fixed4 frag(v2f IN) : SV_Target
             {
-                fixed4 c = tex2D(_MainTex, IN.texcoord) * IN.color;
-                c.rgb = lerp(c.rgb, _FlashColor.rgb, _FlashAmount);
+                fixed4 c = tex2D(_MainTex, IN.texcoord);
+                c.rgb *= IN.color.rgb;
+                c.a *= IN.color.a;
+                // 预乘 alpha 闪白：仅在 sprite 不透明像素染白，透明（圆形外）区域绝不显示，避免方形闪白
+                c.rgb = lerp(c.rgb, _FlashColor.rgb * c.a, _FlashAmount);
                 return c;
             }
             ENDCG

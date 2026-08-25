@@ -409,5 +409,43 @@ namespace BiuBiu.Core
         {
             return baseHealth;
         }
+
+        // ==================== 开场电影卡（电影风格开场：每次启动游戏仅播一次） ====================
+        // 纯黑底 + 居中两行台词（第一问句大字、第二署名半字号），按任意键开始；
+        // 5s 内未按则在右下角淡入「按任意键开始」提醒。进程内静态标记控制：本次启动仅播一次，
+        // 回标题重进不重播，完全退出游戏后下次启动（新进程）重新播放。编辑器下强制重播以便验证。
+
+        /// <summary>开场卡：第一行台词（问句，居中大字）</summary>
+        public const string TitleCardLine1 = "怎么才算好玩？";
+
+        /// <summary>开场卡：第二行台词（署名，半字号、稍暗）</summary>
+        public const string TitleCardLine2 = "——李雷";
+
+        /// <summary>开场卡：右下角超时提醒文案（5s 未按任意键时淡入）</summary>
+        public const string TitleCardHint = "按任意键开始";
+
+        /// <summary>开场卡：第一行字号（px）</summary>
+        public const int TitleCardLine1FontSize = 52;
+
+        /// <summary>开场卡：第二行字号（px，= 第一行一半）</summary>
+        public const int TitleCardLine2FontSize = 26;
+
+        /// <summary>开场卡：提醒字号（px，小字）</summary>
+        public const int TitleCardHintFontSize = 18;
+
+        /// <summary>开场卡：台词淡入时长（秒，黑底上文字从透明到显现）</summary>
+        public const float TitleCardFadeInTime = 0.6f;
+
+        /// <summary>开场卡：确认后台词淡出时长（秒，黑底保持不透明、仅台词渐隐）</summary>
+        public const float TitleCardFadeOutTime = 0.3f;
+
+        /// <summary>开场卡：Done 阶段黑底保持时长（秒，盖住 Boot→Main 切换瞬间，相机已在 Main 首帧 snap 就位，切换丝滑）</summary>
+        public const float TitleCardRevealHold = 0.15f;
+
+        /// <summary>开场卡：超时提醒延迟（秒，开局后多久未按任意键才在右下角淡入提醒）</summary>
+        public const float TitleCardHintDelay = 5f;
+
+        /// <summary>开场卡：提醒呼吸闪烁周期（秒，透明度在 0.4~0.9 间往复）</summary>
+        public const float TitleCardHintPulsePeriod = 1.6f;
     }
 }
