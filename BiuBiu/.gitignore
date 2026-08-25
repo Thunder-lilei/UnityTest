@@ -36,3 +36,6 @@ Assets/TJGenerators.meta
 
 # ===== 资产 QC 预览图（非源码，临时产物） =====
 qc_preview_*.png
+
+# ===== agent 工作记忆（项目内部数据，非源码） =====
+.codebuddy/

@@ -10,7 +10,7 @@ namespace BiuBiu.Player
     /// 主角控制器（数值文档第 3 章；数值接 GameBootstrap.PlayerStats——每轮微增即时生效）。
     /// 移动：Input System（Move=WASD），移速 = 基础 4 tile/s × 每轮微增乘数。
     /// 翻滚：Roll 动作（默认空格，支持改键）；位移 = 基础 2.5 tile / 周期 0.40s / 前 0.30s 无敌；
-    /// 无冷却（动作周期自然限频）；位移曲线缓入缓出（SmoothStep）。
+    /// 冷却 2.0s（翻滚结束后进入冷却，期间不可再次翻滚，周期自然限频）；位移曲线缓入缓出（SmoothStep）。
     /// 受击：IDamageable——2 心起步 / 1 伤每次 / 受击无敌 1.0s（与闪白同步）+ 强震屏。
     /// 死亡（正式流程，设计文档 15 章）：慢动作 0.2×1.5s（unscaled 计时）→ 镜头聚焦（正交 ×0.6）
     /// → GameBootstrap.EndRun 结算 → DeathPanel 战报（再战/回到标题）。
@@ -32,6 +32,7 @@ namespace BiuBiu.Player
         private int health;                 // 当前血量
         private float invulnTimer;          // 受击无敌计时（>0 = 无敌中）
         private float rollTimer;            // 翻滚计时（>0 = 翻滚中）
+        private float rollCooldownTimer;     // 翻滚冷却计时（>0 = 冷却中，不可再次翻滚）
         private Vector2 rollDir;            // 翻滚方向（单位向量）
         private Vector2 lastMoveDir = Vector2.down; // 上一次移动方向（无输入时翻滚的兜底方向）
 
@@ -54,6 +55,12 @@ namespace BiuBiu.Player
 
         /// <summary>当前血量（HUD 红心读取）</summary>
         public int CurrentHealth => health;
+
+        /// <summary>翻滚剩余冷却（秒）；>0 表示冷却中，HUD 冷却环读取</summary>
+        public float RollCooldownRemaining => rollCooldownTimer;
+
+        /// <summary>翻滚冷却总时长（秒），HUD 计算进度用</summary>
+        public float RollCooldownMax => GameBalance.RollCooldown;
 
         /// <summary>是否已死亡</summary>
         public bool IsDead => dead;
@@ -142,6 +149,7 @@ namespace BiuBiu.Player
 
             // ---- 计时器推进 ----
             if (invulnTimer > 0f) invulnTimer -= Time.deltaTime;
+            if (rollCooldownTimer > 0f) rollCooldownTimer -= Time.deltaTime; // 翻滚冷却倒计时
 
             var stats = GameBootstrap.Instance != null ? GameBootstrap.Instance.PlayerStats : null;
 
@@ -180,6 +188,7 @@ namespace BiuBiu.Player
                     }
                     // 翻滚结束清零速度，避免最后一帧的速度残留导致滑行
                     if (Rb != null) Rb.velocity = Vector2.zero;
+                    rollCooldownTimer = GameBalance.RollCooldown; // 进入冷却，冷却内不可再次翻滚
                 }
                 return; // 翻滚期间锁移动输入
             }
@@ -202,10 +211,11 @@ namespace BiuBiu.Player
                 return;
             }
 
-            // ---- 蓄力时冻结常规移动（由 SlingWeapon 拉拽控制 velocity） ----
+            // ---- 蓄力时冻结常规移动：velocity 由 SlingWeapon 提供的拉拽速度统一写入（避免两脚本抢写造成漂移空窗） ----
             if (Weapons.SlingWeapon.IsCharging)
             {
-                // 蓄力期间移动输入不生效；velocity 由 SlingWeapon 蓄力拉拽控制
+                // 蓄力期间移动输入不生效；每帧明确写一次拉拽速度（而非 return 不管），消除 IsCharging 翻转帧的 velocity 空窗
+                if (Rb != null) Rb.velocity = Weapons.SlingWeapon.ChargePullVelocity;
                 return;
             }
 
@@ -224,8 +234,8 @@ namespace BiuBiu.Player
                 Rb.velocity = Vector2.zero;
             }
 
-            // ---- 翻滚触发（周期结束才可再次触发=自然限频） ----
-            if (rollAction != null && rollAction.WasPerformedThisFrame())
+            // ---- 翻滚触发（翻滚结束且冷却完毕才可再次触发） ----
+            if (rollAction != null && rollAction.WasPerformedThisFrame() && rollCooldownTimer <= 0f)
             {
                 rollTimer = GameBalance.RollDuration;
                 rollDir = move.sqrMagnitude > 0.01f ? move.normalized : lastMoveDir;

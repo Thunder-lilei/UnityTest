@@ -12,8 +12,8 @@ namespace BiuBiu.Core
     {
         // ==================== 第 3 章 玩家数值 ====================
 
-        /// <summary>玩家移速（tile/s，快于全部普通敌人）</summary>
-        public const float PlayerMoveSpeed = 4.0f;
+        /// <summary>玩家移速（tile/s，快于全部普通敌人）。手感偏快，下调至 3.4 更稳。</summary>
+        public const float PlayerMoveSpeed = 3.4f;
 
         /// <summary>玩家初始血量（心）</summary>
         public const int PlayerMaxHealth = 2;
@@ -41,8 +41,11 @@ namespace BiuBiu.Core
         /// <summary>翻滚无敌时长（秒，动作周期前段）</summary>
         public const float RollInvulnTime = 0.30f;
 
-        /// <summary>翻滚动作周期（秒；无冷却：本次动作完毕才可再次翻滚，周期自然限频）</summary>
+        /// <summary>翻滚动作周期（秒；翻滚结束后还需等 RollCooldown 才能再次翻滚）</summary>
         public const float RollDuration = 0.40f;
+
+        /// <summary>翻滚冷却（秒）：翻滚动作结束后额外等待时间，期间不可再次翻滚（总周期 = RollDuration + RollCooldown）</summary>
+        public const float RollCooldown = 2.0f;
 
         /// <summary>翻滚位移距离（tile，位移曲线缓入缓出）</summary>
         public const float RollDistance = 2.5f;
@@ -225,7 +228,7 @@ namespace BiuBiu.Core
         public const float OverchargeWarnTime = 1.0f;
 
         /// <summary>白色速射最小发射间隔（秒）：防止狂点刷爆，把白色 DPS 封顶到约 5~6，仍保留速射手感</summary>
-        public const float WhiteFireCooldown = 0.18f;
+        public const float WhiteFireCooldown = 0.3f;
 
         /// <summary>蓄力弹丸视觉：起始距离（角色前方，tile，见数值文档第 9 章）</summary>
         public const float ChargeOrbStartDist = 0.5f;
@@ -306,8 +309,8 @@ namespace BiuBiu.Core
         /// <summary>尸体留存：渐隐时长（秒，渐隐完毕后回池）</summary>
         public const float CorpseFadeDuration = 3.0f;
 
-        /// <summary>尸体留存：变色（暗绿，区分活体）</summary>
-        public static readonly Color CorpseTint = new Color(0.3f, 0.35f, 0.2f, 1f);
+        /// <summary>尸体留存：变色（暗蓝，区分活体；与浅蓝普通敌人同源）</summary>
+        public static readonly Color CorpseTint = new Color(0.28f, 0.4f, 0.5f, 1f);
 
         /// <summary>相机前瞻偏移距离（tile，朝玩家移动方向前探）</summary>
         public const float CameraLookAheadDistance = 1.5f;

@@ -85,6 +85,28 @@ namespace BiuBiu.UI
                 return _heartTex;
             }
         }
+
+        // ---- 翻滚冷却径向环（方案 A：左下角，运行时生成 annulus 环 + 进度弧） ----
+        private static Texture2D _ringBaseTex;   // 暗色底环（整环，一次性生成）
+        private static Texture2D RingBaseTexture
+        {
+            get
+            {
+                if (_ringBaseTex == null) _ringBaseTex = CreateRingTexture(1f); // 整环
+                return _ringBaseTex;
+            }
+        }
+        private Texture2D _ringProgressTex;       // 进度亮弧（按剩余冷却比例重生成，缓存）
+        private float _ringProgressCache = -1f;   // 上次生成进度（避免每帧重生成）
+        /// <summary>生成（或复用缓存）进度环：从顶部顺时针填充 progress(0~1) 比例的亮弧</summary>
+        private Texture2D GetRingProgressTexture(float progress)
+        {
+            if (_ringProgressTex != null && Mathf.Abs(_ringProgressCache - progress) < 0.01f)
+                return _ringProgressTex;
+            _ringProgressTex = CreateRingTexture(progress);
+            _ringProgressCache = progress;
+            return _ringProgressTex;
+        }
         private static Texture2D CreateHeartTexture()
         {
             int s = 32;
@@ -130,6 +152,41 @@ namespace BiuBiu.UI
                 }
             }
             tex.SetPixels32(px);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>
+        /// 生成环形（annulus）贴图：白色实心环。progress=1 画整环；progress&lt;1 只保留从顶部(12点)顺时针到 progress*360° 的弧段，其余透明。
+        /// 用于翻滚冷却径向显示（底环=整环暗色，进度环=亮弧）。
+        /// </summary>
+        private static Texture2D CreateRingTexture(float progress)
+        {
+            const int size = 64;
+            const float rOut = 30f;   // 外半径
+            const float rIn = 22f;    // 内半径（环宽 8px）
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var cols = new Color[size * size];
+            float cx = (size - 1) * 0.5f;
+            float cy = (size - 1) * 0.5f;
+            float maxAngle = progress * Mathf.PI * 2f; // 保留角度上限（弧度，顺时针）
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    int idx = y * size + x;
+                    bool inRing = dist >= rIn && dist <= rOut;
+                    if (!inRing) { cols[idx] = Color.clear; continue; }
+                    // 角度：顶部=0，顺时针递增（屏幕 y 向下）
+                    float a = Mathf.Atan2(dx, -dy);
+                    if (a < 0f) a += Mathf.PI * 2f;
+                    cols[idx] = (progress >= 1f || a <= maxAngle) ? Color.white : Color.clear;
+                }
+            }
+            tex.SetPixels(cols);
             tex.Apply();
             return tex;
         }
@@ -232,6 +289,9 @@ namespace BiuBiu.UI
 
             // 屏幕外敌人方位指示（实心三角，颜色随敌人本色，距离越远越淡）
             DrawOffscreenIndicators();
+
+            // 左下角翻滚冷却径向环
+            DrawRollCooldown();
         }
 
         /// <summary>屏幕外敌人边缘指示：原点左下->GUI 左上需翻转 y</summary>
@@ -282,6 +342,56 @@ namespace BiuBiu.UI
                 GUI.DrawTexture(new Rect(edge.x - size * 0.5f, edge.y - size * 0.5f, size, size), s_triangleTex);
                 GUI.matrix = prev;
             }
+            GUI.color = Color.white;
+        }
+
+        /// <summary>
+        /// 左下角翻滚冷却径向环（方案 A）：底环=暗色整环，进度环=从顶部顺时针填充的亮弧（剩余冷却比例）。
+        /// 就绪时整环亮起并轻微脉冲提示可用；环中心写“闪避”，下方小字“空格”。
+        /// </summary>
+        private void DrawRollCooldown()
+        {
+            var player = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+            if (player == null) return;
+
+            float remaining = player.RollCooldownRemaining;
+            float max = player.RollCooldownMax;
+            float progress = max > 0f ? Mathf.Clamp01(1f - remaining / max) : 1f; // 冷却中进度从 0→1
+            bool ready = remaining <= 0f;
+
+            const float ringSize = 56f;
+            const float margin = 16f;
+            float x = margin;
+            float y = Screen.height - ringSize - margin;
+
+            // 底环（暗色整环）
+            GUI.color = new Color(0.18f, 0.20f, 0.24f, 0.85f);
+            GUI.DrawTexture(new Rect(x, y, ringSize, ringSize), RingBaseTexture);
+
+            // 进度亮弧 / 就绪整环
+            if (ready)
+            {
+                float pulse = 0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 4f);
+                GUI.color = new Color(0.55f, 0.95f, 0.75f, pulse);
+                GUI.DrawTexture(new Rect(x, y, ringSize, ringSize), RingBaseTexture);
+            }
+            else
+            {
+                GUI.color = new Color(0.65f, 0.88f, 1.0f, 0.95f);
+                GUI.DrawTexture(new Rect(x, y, ringSize, ringSize), GetRingProgressTexture(progress));
+            }
+
+            // 环中心“闪避”文字
+            GUI.color = ready ? new Color(0.85f, 1f, 0.9f, 1f) : new Color(0.7f, 0.7f, 0.7f, 0.6f);
+            var centerStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 15,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = GUI.color }
+            };
+            GUI.Label(new Rect(x, y, ringSize, ringSize), "滚", centerStyle);
+
             GUI.color = Color.white;
         }
 

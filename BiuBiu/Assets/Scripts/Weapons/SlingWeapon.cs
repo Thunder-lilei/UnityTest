@@ -29,6 +29,9 @@ namespace BiuBiu.Weapons
         /// <summary>是否正在蓄力（PlayerController 读取以冻结移动）</summary>
         public static bool IsCharging { get; private set; }
 
+        /// <summary>当前蓄力拉拽速度（PlayerController 在蓄力分支统一写入 Rb.velocity，避免两脚本抢写造成漂移空窗）</summary>
+        public static Vector2 ChargePullVelocity { get; private set; } = Vector2.zero;
+
         // ---- 蓄力视觉（弹丸拉拽） ----
         private SpriteRenderer chargeOrb;
         private Vector2 chargeDir;
@@ -147,16 +150,16 @@ namespace BiuBiu.Weapons
                     if (Vector2.Distance(cur, playerOriginalPos) < GameBalance.ChargeMaxPullback - 0.001f)
                     {
                         float pullSpeed = 0.5f + chargeLevel * 0.5f; // 一级1.0/二级1.5 tile/s
-                        // 通过玩家刚体 velocity 推进反向位移（物理引擎自动与墙碰撞阻挡）
-                        var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
-                        if (pc != null && pc.Rb != null) pc.Rb.velocity = -aimDir * pullSpeed;
+                        ChargePullVelocity = -aimDir * pullSpeed;
                     }
                     else
                     {
                         // 已达封顶距离：停住不再后退
-                        var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
-                        if (pc != null && pc.Rb != null) pc.Rb.velocity = Vector2.zero;
+                        ChargePullVelocity = Vector2.zero;
                     }
+                    // 通过玩家刚体 velocity 推进反向位移（物理引擎自动与墙碰撞阻挡）
+                    var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+                    if (pc != null && pc.Rb != null) pc.Rb.velocity = ChargePullVelocity;
                 }
             }
 
@@ -174,9 +177,14 @@ namespace BiuBiu.Weapons
             isCharging = false;
             IsCharging = false;
             chargeOrb.enabled = false;
+            ChargePullVelocity = Vector2.zero; // 复位拉拽速度，避免 PlayerController 读到残留值
             overchargeTimer = 0f; // 蓄力中断/发射后重置过载计时
             overchargeWarned = false; // 重置冒泡提示标志
             AudioManager.StopLoop(); // 终止蓄力音（发射时由发射音接续，中断时直接停）
+
+            // 清零玩家刚体速度：避免蓄力拉拽的残留 velocity 在取消/发射后的过渡帧继续驱动物理位移（漂移 bug 修复）
+            var pc = GameBootstrap.Instance != null ? GameBootstrap.Instance.GetPlayer() : null;
+            if (pc != null && pc.Rb != null) pc.Rb.velocity = Vector2.zero;
         }
 
         /// <summary>发射弹丸（三档：0=白速射/1=黄/2=红，档位由实际蓄力时长决定）</summary>
@@ -193,7 +201,7 @@ namespace BiuBiu.Weapons
             var stats = GameBootstrap.Instance != null ? GameBootstrap.Instance.PlayerStats : null;
             int attackBonus = stats != null ? Mathf.FloorToInt(stats.AttackBonusFloat) : 0;
 
-            int damage = (level >= 2 ? 3 : 1) + attackBonus;   // 白/黄=1，红=3（击碎/对硬核单位高额伤害），加每轮微增
+            int damage = (level >= 2 ? 4 : (level == 1 ? 2 : 1)) + attackBonus;   // 白=1，黄=2(击飞控场)，红=4(对硬核单位高额伤害；对普通敌人走秒杀)，加每轮微增
             float knockback = level == 1 ? 1.5f : 0f;           // 击飞仅黄色档（数值文档 4.1）
             bool shatter = level >= 2;
 

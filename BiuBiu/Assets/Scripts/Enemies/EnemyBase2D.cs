@@ -230,7 +230,7 @@ namespace BiuBiu.Enemies
             {
                 case EnemyType.Elite: return new Color(0.6f, 0.2f, 0.8f);   // 紫
                 case EnemyType.Boss: return new Color(1.0f, 0.85f, 0.2f);  // 金
-                default: return new Color(0.4f, 0.55f, 0.35f);             // 敌人绿
+                default: return new Color(0.45f, 0.72f, 0.85f);            // 浅蓝（雾冰蓝：远处屏幕外箭头与绿地板区分；与击飞亮蓝 0.4,0.8,1.0 拉开）
             }
         }
 
@@ -731,6 +731,7 @@ namespace BiuBiu.Enemies
             {
                 state = State.Seek;
                 sr.color = baseColor;
+                HideWindupArc(); // 打断蓄力时同步隐藏扇形框，避免线框残留（bug 修复）
             }
         }
 
