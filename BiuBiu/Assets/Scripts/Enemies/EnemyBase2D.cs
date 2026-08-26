@@ -785,25 +785,16 @@ namespace BiuBiu.Enemies
             DropManager.Instance?.SpawnStain(transform.position + (Vector3)(Random.insideUnitCircle * 0.4f), data.bodySize.x * 0.7f);
             DropManager.Instance?.SpawnStain(transform.position + (Vector3)(Random.insideUnitCircle * 0.6f), data.bodySize.x * 0.5f);
 
-            // 精英/Boss 击杀演出：hitstop 0.12s + 强震屏（数值文档 9 章）
+            // 精英/Boss 击杀演出：强震屏（数值文档 9 章）
+            // 注：原含 hitstop（timeScale 归零定格），实测像卡顿已移除——震屏保留作为打击反馈
             if (data.enemyType != EnemyType.Normal)
             {
                 if (CameraTrauma.Instance != null)
                     CameraTrauma.Instance.AddTrauma(GameBalance.KillCeremonyTrauma);
-                StartCoroutine(HitstopRoutine());
             }
 
             // 尸体留存：压扁变色渐隐后回池（普通敌人也留尸体）
             StartCoroutine(CorpseRoutine());
-        }
-
-        /// <summary>hitstop 协程：timeScale 归零短暂定格后恢复（仅精英/Boss 终结一击）</summary>
-        private static IEnumerator HitstopRoutine()
-        {
-            float prevScale = Time.timeScale;
-            Time.timeScale = 0f;
-            yield return new WaitForSecondsRealtime(GameBalance.HitstopDuration);
-            Time.timeScale = prevScale;
         }
 
         /// <summary>尸体留存：压扁+变色，停留至全局上限后渐隐回池</summary>
