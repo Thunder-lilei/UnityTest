@@ -342,8 +342,9 @@ namespace BiuBiu.Player
         private void FinishDeath()
         {
             Time.timeScale = 1f; // 恢复正常流速
-            if (GameBootstrap.Instance != null) GameBootstrap.Instance.EndRun(); // 结算本局（累计统计）
-            TitleScreen.Show(); // 直接显示死亡标题卡（「在哪跌倒就在哪躺会儿 ——李雷」），按键即重开
+            BattleReport report = default;
+            if (GameBootstrap.Instance != null) report = GameBootstrap.Instance.EndRun(); // 结算本局（累计统计）
+            TitleScreen.Show(report); // 显示死亡结尾标题卡（附本局战报，在署名下展示「本次 vs 历史」统计行），按键即重开
         }
 
         // ==================== 翻滚残影（M2：位置残影序列） ====================

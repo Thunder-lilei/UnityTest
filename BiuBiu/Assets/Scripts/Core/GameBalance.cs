@@ -442,6 +442,9 @@ namespace BiuBiu.Core
         /// <summary>开场卡：Done 阶段黑底保持时长（秒，盖住 Boot→Main 切换瞬间，相机已在 Main 首帧 snap 就位，切换丝滑）</summary>
         public const float TitleCardRevealHold = 0.15f;
 
+        /// <summary>结尾卡统计行模板（死亡结尾卡署名下空一行展示；{0}=本次轮次 {1}=本次击杀 {2}=历史最高轮次 {3}=历史最多击杀）</summary>
+        public const string EndCardStatsLine = "本次战斗挺过了{0}轮，共消灭{1}敌人，历史最多达到{2}轮，消灭{3}敌人";
+
         /// <summary>开场卡：超时提醒延迟（秒，开局后多久未按任意键才在右下角淡入提醒）</summary>
         public const float TitleCardHintDelay = 3f;
 

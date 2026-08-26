@@ -20,6 +20,9 @@ namespace BiuBiu.UI
         private float elapsed;
         private bool confirmed;
 
+        /// <summary>本局战报（死亡结尾卡时注入；用于在署名下方展示「本次 vs 历史」统计行；非死亡路径调用为 null 则不显示）</summary>
+        private static BattleReport? report;
+
         /// <summary>显示标题界面（单例；已存在则复用）</summary>
         public static void Show()
         {
@@ -27,6 +30,13 @@ namespace BiuBiu.UI
             var go = new GameObject("TitleScreen");
             DontDestroyOnLoad(go);
             instance = go.AddComponent<TitleScreen>();
+        }
+
+        /// <summary>显示标题界面并附带本局战报（死亡流程末尾调用，结尾卡在署名下展示「本次 vs 历史」统计行）</summary>
+        public static void Show(BattleReport r)
+        {
+            report = r;
+            Show();
         }
 
         private void Update()
@@ -46,6 +56,7 @@ namespace BiuBiu.UI
             confirmed = true;
             Time.timeScale = 1f;
             GameState.DeathReportOpen = false;
+            report = null; // 清战报缓存，避免下次标题页残留
             // 重开 Main（新一局）；RuntimeSceneBuilder 重建并触发 GameBootstrap.OnMainSceneReady
             SceneManager.LoadScene("Main");
             Destroy(gameObject);
@@ -76,6 +87,22 @@ namespace BiuBiu.UI
             };
             GUI.Label(new Rect(0, Screen.height * 0.32f + 110, Screen.width, 40),
                 "——李雷", subStyle);
+
+            // 本局 vs 历史最佳统计行（死亡结尾卡专属：署名下空一行展示，小字半透明）
+            if (report.HasValue)
+            {
+                var br = report.Value;
+                var statsStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 20,
+                    normal = { textColor = new Color(0.85f, 0.85f, 0.85f, 0.8f) }
+                };
+                // 空一行（署名基线 40 高 + 空行间距 36）
+                GUI.Label(new Rect(0, Screen.height * 0.32f + 110 + 40 + 36, Screen.width, 30),
+                    string.Format(GameBalance.EndCardStatsLine, br.Wave, br.Kills, SaveSystem.BestWave, SaveSystem.BestKills),
+                    statsStyle);
+            }
 
             // 开始提示（延迟淡入 + 呼吸）
             if (elapsed >= HintDelay)
