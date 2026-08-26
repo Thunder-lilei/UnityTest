@@ -5,10 +5,11 @@ using UnityEngine.SceneManagement;
 namespace BiuBiu.UI
 {
     /// <summary>
-    /// ESC 暂停菜单：标题「喘口气」；按钮：继续 / 重新开始 / 回到标题 / 设置 / 统计记录。
+    /// ESC 暂停菜单：标题「喘口气」；按钮：继续 / 重新开始 / 回到标题 / 设置 / 统计记录 / 退出游戏。
     /// timeScale=0 全局暂停；互斥：死亡战报打开时 ESC 无效。
     /// 设置面板（键位/音量/震屏/慢动作/开发者模式）已接入（SettingsPanel）；
     /// 统计记录子面板展示历史最佳（最大轮次 / 最多击杀，来源 SaveSystem）。
+    /// 退出游戏：编辑器下退出 Playmode，打包后退出进程（设计文档 15 章）。
     /// </summary>
     public class PauseMenu : MonoBehaviour
     {
@@ -82,7 +83,7 @@ namespace BiuBiu.UI
             GUI.color = prev;
 
             // ---- 面板（从下方滑入） ----
-            float panelW = 420f, panelH = 460f;
+            float panelW = 420f, panelH = 530f;
             float offsetY = (1f - ease) * 40f;
             Rect panel = new Rect((Screen.width - panelW) * 0.5f,
                 (Screen.height - panelH) * 0.5f + offsetY, panelW, panelH);
@@ -119,6 +120,12 @@ namespace BiuBiu.UI
                 if (GUI.Button(new Rect(bx, panel.y + 390f, bw, bh), "统计记录", btnStyle))
                 {
                     showStats = true;
+                }
+
+                // 退出游戏按钮（编辑器退出 Playmode，打包退出进程）
+                if (GUI.Button(new Rect(bx, panel.y + 460f, bw, bh), "退出游戏", btnStyle))
+                {
+                    QuitGame();
                 }
             }
 
@@ -171,6 +178,17 @@ namespace BiuBiu.UI
         {
             Resume();
             TitleScreen.Show();
+        }
+
+        /// <summary>退出游戏：编辑器下退出 Playmode，打包后退出进程</summary>
+        private static void QuitGame()
+        {
+            Resume();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
     }
 }
